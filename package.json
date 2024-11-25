@@ -1,0 +1,14 @@
+{
+    "name": "dino-run",
+    "version": "1.0.0",
+    "description": "Chrome Dino Game Clone",
+    "scripts": {
+        "lint": "eslint .",
+        "lint:fix": "eslint . --fix",
+        "format": "eslint . --fix"
+    },
+    "devDependencies": {
+        "eslint": "^8.56.0",
+        "eslint-plugin-jsdoc": "^50.5.0"
+    }
+}

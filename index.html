@@ -1,0 +1,87 @@
+<!doctype html>
+<!-- 
+    Welcome to Dino Run! 🦖
+    This is like a blueprint for our game - it tells the browser how to build everything.
+    Just like building with LEGO, we need different pieces to make our game work!
+-->
+<html lang="en">
+    <head>
+        <!-- These are like instructions for the browser to read our game correctly -->
+        <meta charset="UTF-8" />
+        <title>Dino Run Game</title>
+
+        <!-- This is like the art book that tells our game how to look pretty! -->
+        <link rel="stylesheet" href="styles.css" />
+    </head>
+    <body>
+        <!-- 
+            The Game World! 🌟
+            Think of this as our dino's playground - everything happens in here.
+            It's like a big box where our dino can run and jump!
+        -->
+        <div id="game-container">
+            <!-- 
+                The Running Track 🏃
+                This is where our dino runs and jumps over obstacles.
+                Just like a real running track, but with dinosaurs!
+            -->
+            <div id="game">
+                <!-- Our brave dino hero! -->
+                <div id="dino"></div>
+                <!-- The ground that our dino runs on -->
+                <div id="ground"></div>
+            </div>
+
+            <!-- 
+                Scoreboard 🏆
+                Just like in sports, we keep track of how well you're doing!
+                The higher the score, the better you're playing.
+            -->
+            <div id="score">Score: <span id="score-value">0</span></div>
+            <div id="high-score">High Score: <span id="high-score-value">0</span></div>
+
+            <!-- 
+                Welcome Screen 📖
+                This is like the title page of a storybook.
+                It tells you how to start your adventure!
+            -->
+            <div id="start-screen">
+                <h1>Dino Run</h1>
+                <p>Press SPACE to start</p>
+                <p>
+                    How to Play:<br />
+                    🦖 Press SPACE / UP ARROW to JUMP (hold it to jump higher!)<br />
+                    🦖 Press DOWN ARROW / CTRL to DUCK under obstacles<br />
+                    🦖 Collect ⌛ to slow down time!
+                </p>
+            </div>
+
+            <!-- 
+                Game Over Screen 🎮
+                Don't worry if you hit something - everyone does!
+                This screen lets you see how well you did and try again.
+            -->
+            <div id="game-over-screen" style="display: none">
+                <h2>Game Over!</h2>
+                <p>Your Score: <span id="final-score">0</span></p>
+                <button id="restart-btn">Try Again!</button>
+            </div>
+        </div>
+
+        <!-- 
+            Sound Effects 🔊
+            These are like the sound effects in cartoons!
+            They make the game more fun and exciting.
+        -->
+        <audio id="jump-sound" src="sounds/jump.wav" preload="auto"></audio>
+        <audio id="game-over-sound" src="sounds/gameover.wav" preload="auto"></audio>
+        <audio id="point-sound" src="sounds/point.wav" preload="auto"></audio>
+
+        <!-- 
+            The Game's Brain 🧠
+            This connects to our JavaScript file that makes everything work.
+            It's like the control center that tells our dino what to do!
+        -->
+        <script src="core/game.js" type="module"></script>
+    </body>
+</html>

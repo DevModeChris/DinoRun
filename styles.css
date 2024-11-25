@@ -1,0 +1,293 @@
+/* 
+ * CSS Styles for the Dino Run Game
+ * This file controls how our game looks on the screen
+ */
+
+/* Make the whole page centered and use a light gray background */
+body {
+    display: flex; /* Use flexbox to center everything */
+    justify-content: center; /* Center horizontally */
+    align-items: center; /* Center vertically */
+    height: 100vh; /* Take up the full height of the screen */
+    margin: 0; /* Remove any default space around the edges */
+    font-family: Arial, sans-serif; /* Use a clean, easy-to-read font */
+    background-color: #f0f0f0; /* Light gray background color */
+}
+
+/* The container that holds our entire game */
+#game-container {
+    width: 800px; /* Increased from default */
+    height: 400px; /* Increased from default */
+    margin: 50px auto;
+    position: relative;
+    overflow: hidden;
+    background-color: #f7f7f7;
+}
+
+/* The actual game area where the action happens */
+#game {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+}
+
+/* Design the dino character using CSS */
+#dino {
+    width: 40px; /* Increased size */
+    height: 60px; /* Increased size */
+    background-color: green;
+    position: absolute;
+    bottom: 0;
+    left: 80px; /* Moved slightly right for better visibility */
+    transition: height 0.1s ease-out;
+}
+
+/* Dino head */
+#dino::before {
+    content: ''; /* Create a pseudo-element */
+    position: absolute; /* Position exactly */
+    top: 5px; /* A little from the top */
+    right: 5px; /* A little from the right */
+    width: 20px; /* Set width */
+    height: 20px; /* Set height */
+    background-color: #535353; /* Same color as the body */
+    border-radius: 50%; /* Make it a circle */
+}
+
+/* Dino eye */
+#dino::after {
+    content: ''; /* Create a pseudo-element */
+    position: absolute; /* Position exactly */
+    top: 10px; /* A little from the top */
+    right: 10px; /* A little from the right */
+    width: 5px; /* Set width */
+    height: 5px; /* Set height */
+    background-color: white; /* White eye */
+    border-radius: 50%; /* Make it a circle */
+}
+
+/* Dino leg animation */
+@keyframes run {
+    0% {
+        bottom: 0;
+    } /* Start at the bottom */
+    50% {
+        bottom: 20px;
+    } /* Move down a bit */
+    100% {
+        bottom: 0;
+    } /* Return to the bottom */
+}
+
+/* Apply running animation when game starts */
+#dino.running {
+    animation: run 0.5s infinite; /* Run the animation continuously */
+}
+
+/* Dino crouching */
+#dino.crouching {
+    height: 30px; /* Half height when crouching */
+    transition: height 0.1s ease-out;
+}
+
+#dino.crouching::before {
+    top: 2px; /* Adjust head position when crouching */
+}
+
+#dino.crouching::after {
+    top: 5px; /* Adjust eye position when crouching */
+}
+
+/* Slow motion effects */
+.slow-motion-active #dino.running {
+    animation-duration: 1s; /* Slow down dino animation */
+}
+
+.slow-motion-active {
+    filter: sepia(0.3) hue-rotate(200deg);
+}
+
+.slow-motion-active .obstacle {
+    transition: right 0.1s linear;
+}
+
+/* Ground styling */
+#ground {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    height: 20px; /* Increased height */
+    background-color: #333;
+    z-index: 1;
+}
+
+/* Obstacle styling */
+.obstacle {
+    position: absolute;
+    bottom: 20px; /* Match ground height */
+    width: 30px; /* Adjusted width */
+    height: 60px; /* Adjusted height */
+    background-color: red;
+    z-index: 2;
+}
+
+/* Bird obstacle */
+.obstacle.bird {
+    background-color: #4a90e2;
+    width: 40px; /* Adjusted width */
+    height: 30px; /* Adjusted height */
+    border-radius: 10px;
+    animation: fly 0.5s infinite;
+}
+
+@keyframes fly {
+    0% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(-5px);
+    }
+    100% {
+        transform: translateY(0);
+    }
+}
+
+/* Rock obstacle */
+.obstacle.rock {
+    background-color: #666;
+    width: 50px; /* Adjusted width */
+    height: 40px; /* Adjusted height */
+    border-radius: 5px;
+}
+
+.obstacle.rock.small {
+    height: 20px;
+}
+.obstacle.rock.medium {
+    height: 35px;
+}
+.obstacle.rock.large {
+    height: 50px;
+}
+
+/* Cactus obstacle */
+.obstacle.cactus {
+    background-color: #2ecc71;
+    width: 30px; /* Adjusted width */
+    height: 70px; /* Adjusted height */
+    border-radius: 2px;
+}
+
+.obstacle.cactus.small {
+    height: 30px;
+}
+.obstacle.cactus.medium {
+    height: 45px;
+}
+.obstacle.cactus.large {
+    height: 60px;
+}
+
+/* Hole obstacle */
+.obstacle.hole {
+    background-color: #000; /* Darker color for better visibility */
+    border: 3px solid #555; /* More visible edge all around */
+    border-bottom: none;
+    bottom: 0; /* Align with ground */
+    height: 20px; /* Base height same as ground */
+    z-index: 3; /* Ensure holes appear above ground */
+    box-shadow:
+        inset 0 5px 5px rgba(0, 0, 0, 0.8),
+        0 -2px 4px rgba(0, 0, 0, 0.3); /* Add outer shadow for more depth */
+}
+
+.obstacle.hole.small {
+    width: 60px;
+}
+.obstacle.hole.medium {
+    width: 80px;
+}
+.obstacle.hole.large {
+    width: 100px;
+}
+
+/* Power-up styling */
+.power-up {
+    position: absolute;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: linear-gradient(135deg, #4a90e2, #357abd);
+    border: 2px solid #fff;
+    box-shadow: 0 0 10px rgba(74, 144, 226, 0.5);
+    animation: float 1s infinite ease-in-out alternate;
+    z-index: 2;
+    font-size: 16px;
+    color: white;
+    text-align: center;
+    line-height: 30px;
+    padding-left: 1px; /* Slight adjustment for emoji centering */
+}
+
+.power-up.slow-motion {
+    background: linear-gradient(135deg, #9b59b6, #8e44ad);
+}
+
+@keyframes float {
+    from {
+        transform: translateY(0);
+    }
+    to {
+        transform: translateY(-10px);
+    }
+}
+
+/* Score display */
+#score {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    font-size: 24px; /* Increased font size */
+    font-weight: bold;
+    color: #333;
+}
+
+/* High score display */
+#high-score {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    font-size: 24px; /* Increased font size */
+    font-weight: bold;
+    color: #333;
+}
+
+/* Game screens (start and game over) */
+#start-screen,
+#game-over-screen {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background-color: rgba(0, 0, 0, 0.7);
+    color: white;
+    font-size: 24px;
+    z-index: 1000; /* Ensure screens appear above everything */
+}
+
+/* Style the restart button */
+#restart-btn {
+    margin-top: 20px; /* Space above the button */
+    padding: 10px 20px; /* Make the button a good size */
+    font-size: 16px; /* Readable text size */
+    cursor: pointer; /* Change cursor to hand when hovering */
+}
