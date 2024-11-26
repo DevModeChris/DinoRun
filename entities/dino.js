@@ -18,6 +18,7 @@ export class Dino {
         this.isJumping = false; // Are we currently jumping?
         this.boostStartTime = 0; // When did the jump start?
         this.isSpacePressed = false; // Are we holding the jump button?
+        this.lastUpdateTime = 0; // Track last update time for delta time calculation
 
         // Crouching properties
         this.isCrouching = false; // Are we currently crouching?
@@ -44,7 +45,7 @@ export class Dino {
     /**
      * Makes the dino start jumping when spacebar is pressed
      */
-    jump(jumpStrength, isSlowMotionActive = false) {
+    jump(jumpStrength) {
         // Can't start a new jump if we're already in the air
         if (this.isJumping) {
             return;
@@ -53,9 +54,10 @@ export class Dino {
         this.isJumping = true;
         this.isSpacePressed = true;
         this.boostStartTime = Date.now();
+        this.lastUpdateTime = Date.now();
 
-        // Scale jump strength during slow motion
-        this.verticalVelocity = isSlowMotionActive ? jumpStrength * 0.5 : jumpStrength;
+        // Use full jump strength - physics scaling will handle slow motion
+        this.verticalVelocity = jumpStrength;
         this.element.classList.remove('running');
     }
 
@@ -103,14 +105,20 @@ export class Dino {
     updatePosition(gravity, jumpBoostSpeed, maxBoostTime, isSlowMotion, slowMotionSpeedMultiplier) {
         // If we're jumping, apply physics!
         if (this.isJumping) {
-            // Scale gravity during slow motion
-            const effectiveGravity = isSlowMotion ? gravity * 0.25 : gravity;
+            const currentTime = Date.now();
 
-            // Apply gravity (pulls dino down)
-            this.verticalVelocity -= effectiveGravity;
+            // Calculate time since last update, scaled for slow motion
+            const deltaTime = (currentTime - this.lastUpdateTime) * (isSlowMotion ? slowMotionSpeedMultiplier : 1);
+            this.lastUpdateTime = currentTime;
 
-            // Update dino's height
-            this.verticalPosition += this.verticalVelocity;
+            // Scale physics calculations by delta time
+            const timeScale = deltaTime / (1000 / 60); // Normalize to 60 FPS
+
+            // Apply gravity with time scaling
+            this.verticalVelocity -= gravity * timeScale;
+
+            // Update position with time scaling
+            this.verticalPosition += this.verticalVelocity * timeScale;
 
             // Check if we've landed
             if (this.verticalPosition <= 0) {
@@ -119,14 +127,14 @@ export class Dino {
 
             // Handle continuous jump boost while space is held
             if (this.isSpacePressed && this.verticalVelocity > 0) {
-                const currentTime = Date.now();
                 const boostTimeElapsed = currentTime - this.boostStartTime;
+
+                // Scale boost time in slow-motion to allow for the same control period
                 const adjustedMaxBoostTime = isSlowMotion ? maxBoostTime / slowMotionSpeedMultiplier : maxBoostTime;
 
                 if (boostTimeElapsed <= adjustedMaxBoostTime) {
-                    // Scale boost speed during slow motion
-                    const effectiveBoostSpeed = isSlowMotion ? jumpBoostSpeed * 0.5 : jumpBoostSpeed;
-                    this.verticalVelocity += effectiveBoostSpeed;
+                    // Apply boost with time scaling
+                    this.verticalVelocity += jumpBoostSpeed * timeScale;
                 }
             }
 

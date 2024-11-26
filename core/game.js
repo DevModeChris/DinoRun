@@ -79,7 +79,6 @@ export class DinoGame {
                 else if (!this.isGameOver) {
                     this.dino.jump(
                         GAME_CONSTANTS.PHYSICS.JUMP_STRENGTH,
-                        this.isSlowMotionActive,
                     );
                     this.audioManager.play('jump', this.isSlowMotionActive ? 0.5 : 1);
                 }
