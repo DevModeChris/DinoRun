@@ -84,7 +84,7 @@ export class Dino {
         else {
             this.element.classList.remove('crouching');
 
-            if (!this.isJumping) {
+            if (!this.isJumping && window.game && window.game.gameStarted && !window.game.isGameOver) {
                 this.element.classList.add('running');
             }
         }
@@ -144,7 +144,8 @@ export class Dino {
         this.verticalPosition = 0;
         this.verticalVelocity = 0;
 
-        if (!this.isCrouching) {
+        // Only add running class if game is active and not crouching
+        if (!this.isCrouching && window.game && window.game.gameStarted && !window.game.isGameOver) {
             this.element.classList.add('running');
         }
     }
@@ -158,7 +159,7 @@ export class Dino {
         this.isJumping = false;
         this.isSpacePressed = false;
         this.isCrouching = false;
-        this.element.classList.remove('crouching');
+        this.element.classList.remove('crouching', 'running', 'dead');
         this.element.style.bottom = '0';
     }
 }

@@ -23,7 +23,12 @@ export class DinoGame {
         this.gameContainer = document.getElementById('game');
         this.startScreen = document.getElementById('start-screen');
         this.gameOverScreen = document.getElementById('game-over-screen');
-        this.finalScoreElement = document.getElementById('final-score');
+
+        // Get the score container and its child elements
+        this.finalScoreContainer = document.getElementById('final-score-container');
+        this.finalScoreElement = this.finalScoreContainer.querySelector('.final-score');
+        this.highScoreMessage = document.querySelector('.high-score-message');
+
         this.restartBtn = document.getElementById('restart-btn');
 
         // Create our helper managers for sound and scoring
@@ -45,12 +50,18 @@ export class DinoGame {
         this.isSlowMotionActive = false; // Is slow-motion power-up active?
         this.slowMotionTimeout = null; // Timer for slow-motion power-up
 
+        // Make sure dino starts in the correct state
+        this.dino.element.classList.remove('crouching', 'running', 'dead');
+
         // Set up our event listeners (watching for player actions)
         this.bindEvents();
 
         // Start our game loop
         this.animate = this.animate.bind(this);
         requestAnimationFrame(this.animate);
+
+        // Expose game instance globally
+        window.game = this;
     }
 
     /**
@@ -81,6 +92,10 @@ export class DinoGame {
                 || event.code === 'ControlRight'
             ) {
                 event.preventDefault();
+                if (this.isGameOver || !this.gameStarted) {
+                    return;
+                }
+
                 this.dino.crouch(true);
             }
             else if (event.code === 'Enter' && this.isGameOver) {
@@ -111,15 +126,42 @@ export class DinoGame {
         this.gameStarted = true;
         this.startScreen.style.display = 'none';
         this.dino.element.classList.add('running');
+
+        // Reset the score timer when game starts
+        this.lastScoreTime = Date.now();
     }
 
     /**
      * gameOver handles what happens when the dino hits an obstacle
      */
     gameOver() {
+        // Set game over state
         this.isGameOver = true;
+
+        // Get the current score and check if it's a new high score
+        const currentScore = this.scoreManager.getScore(false);
+        const isNewHighScore = this.scoreManager.isNewHighScore();
+
+        // Update the high score if needed
+        if (isNewHighScore) {
+            this.scoreManager.updateHighScore();
+        }
+
+        // Show game over screen
         this.gameOverScreen.style.display = 'flex';
-        this.finalScoreElement.textContent = this.scoreManager.getFinalScore();
+        this.finalScoreElement.textContent = String(currentScore).padStart(5, '0');
+
+        // Show/hide high score message using classList
+        if (isNewHighScore) {
+            this.highScoreMessage.classList.add('visible');
+            this.audioManager.play('point'); // Play a celebratory sound
+        }
+        else {
+            this.highScoreMessage.classList.remove('visible');
+        }
+
+        // Stop the dino and play game over sound
+        this.dino.element.classList.remove('crouching', 'running');
         this.dino.element.classList.add('dead');
         this.audioManager.play('gameOver');
     }
@@ -129,25 +171,33 @@ export class DinoGame {
      */
     restartGame() {
         // Reset game state
-        this.gameStarted = false;
         this.isGameOver = false;
         this.gameSpeed = GAME_CONSTANTS.GAME_SPEED.INITIAL;
-        this.deactivateSlowMotion();
 
         // Clear objects
         this.obstacles.forEach((obstacle) => obstacle.remove());
         this.powerUps.forEach((powerUp) => powerUp.remove());
         this.obstacles = [];
         this.powerUps = [];
+        this.lastObstacleTime = 0;
+        this.lastPowerUpTime = 0;
+        this.lastScoreTime = 0;
+        this.deactivateSlowMotion();
 
-        // Reset UI
+        // Reset the dino
+        this.dino.reset();
+        this.dino.element.classList.remove('crouching', 'running', 'dead');
+
+        // Reset the score
+        this.scoreManager.reset();
+        this.highScoreMessage.classList.remove('visible');
+
+        // Hide the game over screen and show the start screen
         this.gameOverScreen.style.display = 'none';
         this.startScreen.style.display = 'flex';
-        this.dino.element.classList.remove('dead');
-        this.scoreManager.reset();
 
-        // Start game
-        this.startGame();
+        // Reset game started flag
+        this.gameStarted = false;
     }
 
     /**
@@ -217,6 +267,9 @@ export class DinoGame {
      * initialise is our game loop - it runs many times per second to update everything in the game
      */
     animate() {
+        // Always request next frame first to keep animation smooth
+        requestAnimationFrame(this.animate);
+
         if (this.gameStarted && !this.isGameOver) {
             // Update game speed
             if (this.gameSpeed < GAME_CONSTANTS.GAME_SPEED.MAX) {
@@ -289,8 +342,6 @@ export class DinoGame {
                 }
             }
         }
-
-        requestAnimationFrame(this.animate);
     }
 }
 

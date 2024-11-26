@@ -63,8 +63,12 @@
             -->
             <div id="game-over-screen" style="display: none">
                 <h2>Game Over!</h2>
-                <p>Your Score: <span id="final-score">0</span></p>
-                <button id="restart-btn">Try Again!</button>
+                <div id="final-score-container">
+                    <div class="high-score-message">NEW HIGH SCORE!</div>
+                    <span class="score-label">Your Score:</span>
+                    <span class="final-score">0</span>
+                </div>
+                <button type="button" id="restart-btn">Try Again!</button>
             </div>
         </div>
 
