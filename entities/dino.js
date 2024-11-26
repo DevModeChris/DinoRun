@@ -44,11 +44,12 @@ export class Dino {
 
     /**
      * Makes the dino start jumping when spacebar is pressed
+     * @returns {boolean} Whether a new jump was started
      */
     jump(jumpStrength) {
         // Can't start a new jump if we're already in the air
         if (this.isJumping) {
-            return;
+            return false;
         }
 
         this.isJumping = true;
@@ -59,6 +60,8 @@ export class Dino {
         // Use full jump strength - physics scaling will handle slow motion
         this.verticalVelocity = jumpStrength;
         this.element.classList.remove('running');
+
+        return true;
     }
 
     /**

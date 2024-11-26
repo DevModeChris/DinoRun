@@ -77,10 +77,13 @@ export class DinoGame {
                     this.startGame();
                 }
                 else if (!this.isGameOver) {
-                    this.dino.jump(
+                    // Only play jump sound if we actually start a new jump
+                    const didJumpStart = this.dino.jump(
                         GAME_CONSTANTS.PHYSICS.JUMP_STRENGTH,
                     );
-                    this.audioManager.play('jump', this.isSlowMotionActive ? 0.5 : 1);
+                    if (didJumpStart) {
+                        this.audioManager.play('jump', this.isSlowMotionActive ? 0.5 : 1);
+                    }
                 }
 
                 this.dino.isSpacePressed = true;
