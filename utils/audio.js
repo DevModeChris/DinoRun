@@ -9,11 +9,14 @@ export class AudioManager {
      * Initialises all the sound effects we'll need in the game
      */
     constructor() {
-        // Get all our sound effects from the HTML
+        // Get all our sound effects from the assets
         this.sounds = {
+            // TODO: Replace sound effects
             jump: document.getElementById('jump-sound'),
             gameOver: document.getElementById('game-over-sound'),
             point: document.getElementById('point-sound'),
+            powerUp: document.getElementById('point-sound'),
+            fall: document.getElementById('jump-sound'),
         };
 
         // Keep track of when sounds were last played
@@ -22,14 +25,13 @@ export class AudioManager {
             jump: 0,
             gameOver: 0,
             point: 0,
+            fall: 0,
         };
 
         // Set up each sound with the right volume and settings
         Object.values(this.sounds).forEach((sound) => {
-            if (sound) {
-                sound.volume = 0.3; // 30% volume - not too loud!
-                sound.preservesPitch = false; // Allow pitch to change with speed
-            }
+            sound.volume = 0.3; // 30% volume - not too loud!
+            sound.preservesPitch = false; // Allow pitch to change with speed
         });
     }
 

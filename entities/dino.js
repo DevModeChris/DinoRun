@@ -162,15 +162,24 @@ export class Dino {
     }
 
     /**
-     * Resets the dino to its starting state
+     * 🕳️ Make the dino fall into a hole
+     */
+    fall() {
+        this.element.classList.remove('running', 'crouching');
+        this.element.classList.add('falling');
+
+        return new Promise((resolve) => {
+            setTimeout(resolve, 800); // Match the CSS animation duration
+        });
+    }
+
+    /**
+     * 🔄 Reset the dino to its starting state
      */
     reset() {
+        this.element.classList.remove('running', 'crouching', 'falling', 'dead');
         this.verticalPosition = 0;
         this.verticalVelocity = 0;
-        this.isJumping = false;
-        this.isSpacePressed = false;
-        this.isCrouching = false;
-        this.element.classList.remove('crouching', 'running', 'dead');
-        this.element.style.bottom = '0';
+        this.element.style.bottom = '0px';
     }
 }

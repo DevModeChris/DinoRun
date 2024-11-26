@@ -99,6 +99,23 @@ body {
     top: 5px; /* Adjust eye position when crouching */
 }
 
+/* Dino falling animation */
+@keyframes fall {
+    0% {
+        transform: translateY(0) rotate(0deg);
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(100px) rotate(90deg);
+        opacity: 0;
+    }
+}
+
+#dino.falling {
+    animation: fall 0.8s ease-in forwards;
+    z-index: 1; /* Ensure dino appears behind obstacles when falling */
+}
+
 /* Slow motion effects */
 .slow-motion-active #dino.running {
     animation-duration: 1s; /* Slow down dino animation */
@@ -126,90 +143,20 @@ body {
 .obstacle {
     position: absolute;
     bottom: 20px; /* Match ground height */
-    width: 30px; /* Adjusted width */
-    height: 60px; /* Adjusted height */
-    background-color: red;
     z-index: 2;
 }
 
-/* Bird obstacle */
+/* Base styles for each obstacle type */
 .obstacle.bird {
-    background-color: #4a90e2;
-    width: 40px; /* Adjusted width */
-    height: 30px; /* Adjusted height */
     border-radius: 10px;
-    animation: fly 0.5s infinite;
 }
 
-@keyframes fly {
-    0% {
-        transform: translateY(0);
-    }
-    50% {
-        transform: translateY(-5px);
-    }
-    100% {
-        transform: translateY(0);
-    }
-}
-
-/* Rock obstacle */
 .obstacle.rock {
-    background-color: #666;
-    width: 50px; /* Adjusted width */
-    height: 40px; /* Adjusted height */
     border-radius: 5px;
 }
 
-.obstacle.rock.small {
-    height: 20px;
-}
-.obstacle.rock.medium {
-    height: 35px;
-}
-.obstacle.rock.large {
-    height: 50px;
-}
-
-/* Cactus obstacle */
 .obstacle.cactus {
-    background-color: #2ecc71;
-    width: 30px; /* Adjusted width */
-    height: 70px; /* Adjusted height */
     border-radius: 2px;
-}
-
-.obstacle.cactus.small {
-    height: 30px;
-}
-.obstacle.cactus.medium {
-    height: 45px;
-}
-.obstacle.cactus.large {
-    height: 60px;
-}
-
-/* Hole obstacle */
-.obstacle.hole {
-    background-color: #000; /* Darker color for better visibility */
-    border: 3px solid #555; /* More visible edge all around */
-    border-bottom: none;
-    bottom: 0; /* Align with ground */
-    height: 20px; /* Base height same as ground */
-    z-index: 3; /* Ensure holes appear above ground */
-    box-shadow:
-        inset 0 5px 5px rgba(0, 0, 0, 0.8),
-        0 -2px 4px rgba(0, 0, 0, 0.3); /* Add outer shadow for more depth */
-}
-
-.obstacle.hole.small {
-    width: 60px;
-}
-.obstacle.hole.medium {
-    width: 80px;
-}
-.obstacle.hole.large {
-    width: 100px;
 }
 
 /* Power-up styling */

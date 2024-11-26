@@ -3,46 +3,93 @@
  *
  * Think of obstacles like hurdles in a race - they're the tricky things
  * our player character needs to jump over or duck under to stay safe!
- *
- * We have different types: cacti (like in a desert), rocks, and even flying birds!
  */
+
+import { OBSTACLE_TYPES, getRandomObstacleType, getRandomSize } from '../config/obstacles.js';
+
 export class Obstacle {
     /**
      * 🎮 Initialising a New Obstacle
      *
-     * We need to:
-     * 1. Create the obstacle
-     * 2. Choose what kind it will be
-     * 3. Put it in the right spot in our game!
-     *
      * @param {HTMLElement} gameContainer - The game's playground where we put our obstacle
-     * @param {number} speed - How fast the obstacle moves
+     * @param {number} speed - Base speed for the obstacle
+     * @param {string} [type] - Specific obstacle type, or random if not specified
+     * @param {string} [size] - Specific size, or random if not specified
      */
-    constructor(gameContainer, speed) {
+    constructor(gameContainer, speed, type, size) {
         // 🎨 Create the obstacle's look
         this.element = document.createElement('div');
 
-        // 🎲 Let's randomly pick what our obstacle will be - it's like rolling a dice!
-        const types = ['cactus', 'rock', 'bird'];  // Different types of obstacles
-        const sizes = ['small', 'medium', 'large']; // Different sizes (like S, M, L t-shirts!)
-        const type = types[Math.floor(Math.random() * types.length)];
-        const size = sizes[Math.floor(Math.random() * sizes.length)];
+        // Get obstacle type and configuration
+        this.type = type || getRandomObstacleType();
+        this.config = OBSTACLE_TYPES[this.type];
 
-        // 🎭 Give our obstacle its costume (like dressing up for Halloween!)
-        this.element.className = `obstacle ${type} ${size}`;
+        // Get obstacle size
+        this.size = size || getRandomSize(this.config.sizes);
 
-        // Store the obstacle type
-        this.type = type;
+        // Set up the obstacle's appearance
+        this.element.className = `obstacle ${this.config.className} ${this.size}`;
+
+        // Apply base styles
+        this.element.style.backgroundColor = this.config.backgroundColor;
+        this.element.style.width = `${this.config.baseWidth}px`;
+
+        // Calculate and set height based on size multiplier
+        const heightMultiplier = this.config.heightMultipliers?.[this.size] ?? 1;
+        const height = this.config.baseHeight * heightMultiplier;
+        this.element.style.height = `${height}px`;
+
+        // Calculate and set width if there are width multipliers
+        if (this.config.widthMultipliers) {
+            const widthMultiplier = this.config.widthMultipliers[this.size];
+            this.element.style.width = `${this.config.baseWidth * widthMultiplier}px`;
+        }
+
+        // Apply any additional styles
+        if (this.config.styles) {
+            Object.entries(this.config.styles).forEach(([property, value]) => {
+                this.element.style[property] = value;
+            });
+        }
 
         // 📍 Place the obstacle at the starting position
         this.position = gameContainer.offsetWidth;
-        if (type === 'bird') {
-            this.element.style.bottom = '100px'; // Birds fly high in the sky! 🦅
-            // Birds move 1x to 1.5x faster than other obstacles!
-            this.speed = speed * (1 + (Math.random() * 0.5));
+
+        // Set vertical position (for flying obstacles)
+        if (this.config.bottom !== undefined) {
+            this.element.style.bottom = `${this.config.bottom}px`;
         }
-        else {
-            this.speed = speed;
+
+        // Set speed (use custom speed function if defined)
+        this.speed = this.config.getSpeed ? this.config.getSpeed(speed) : speed;
+
+        // Add animations if defined
+        if (this.config.animations) {
+            // Add animation class names to the element
+            const animationClasses = Object.keys(this.config.animations).map((name) => `${this.config.className}-${name}`);
+            this.element.classList.add(...animationClasses);
+
+            // Set up CSS animations
+            Object.entries(this.config.animations).forEach(([name, config]) => {
+                const animationName = `${this.config.className}-${name}`;
+                if (!document.querySelector(`style[data-animation="${animationName}"]`)) {
+                    // Create keyframes if they don't exist yet
+                    const style = document.createElement('style');
+                    style.setAttribute('data-animation', animationName);
+                    style.textContent = `
+                        @keyframes ${animationName} {
+                            ${config.keyframes.map((frame, index) =>
+        `${(index * 100 / (config.keyframes.length - 1))}% { ${Object.entries(frame).map(([prop, value]) =>
+            `${prop}: ${value}`).join('; ')} }`,
+    ).join('\n')}
+                        }
+                        .${animationName} {
+                            animation: ${animationName} ${config.duration}s infinite;
+                        }
+                    `;
+                    document.head.appendChild(style);
+                }
+            });
         }
 
         // Update the position on screen
@@ -53,14 +100,10 @@ export class Obstacle {
     /**
      * 🔄 Moving the Obstacle
      *
-     * Like a train moving along its track, we need to keep
-     * updating where our obstacle is on the screen!
-     *
-     * @param {number} speedMultiplier - Changes how fast things move (like a speed boost or slow-motion!)
-     * @returns {boolean} - Tells us if the obstacle is still visible on screen
+     * @param {number} speedMultiplier - How much to multiply the speed by (for power-ups)
+     * @returns {boolean} - Whether the obstacle is still active (on screen)
      */
-    update(speedMultiplier = 1) {
-        // Move the obstacle to the left
+    update(speedMultiplier) {
         this.position -= this.speed * speedMultiplier;
         this.element.style.left = `${this.position}px`;
 
@@ -69,18 +112,16 @@ export class Obstacle {
     }
 
     /**
-     * 📏 Getting the Obstacle's Size and Position
-     *
-     * We need to know exactly where our obstacle is and how big it is
-     * so we can check if our player character bumps into it!
+     * 🎯 Get Collision Box
+     * This tells us exactly where our obstacle is for checking collisions
      */
     getHitbox() {
-        const rect = this.element.getBoundingClientRect();
+        const bounds = this.element.getBoundingClientRect();
         return {
-            x: rect.left,
-            y: rect.top,
-            width: rect.width,
-            height: rect.height,
+            x: bounds.left,
+            y: bounds.top,
+            width: bounds.width,
+            height: bounds.height,
         };
     }
 

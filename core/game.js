@@ -266,27 +266,11 @@ export class DinoGame {
     }
 
     /**
-     * initialise is our game loop - it runs many times per second to update everything in the game
+     * 🔄 This is our game loop - it runs many times per second to update everything
      */
     animate() {
-        // Always request next frame first to keep animation smooth
-        requestAnimationFrame(this.animate);
-
         if (this.gameStarted && !this.isGameOver) {
-            // Update game speed
-            if (this.gameSpeed < GAME_CONSTANTS.GAME_SPEED.MAX) {
-                this.gameSpeed += GAME_CONSTANTS.GAME_SPEED.ACCELERATION;
-            }
-
-            // Update score based on time
-            const currentTime = Date.now();
-            if (currentTime - this.lastScoreTime >= (this.isSlowMotionActive ? 200 : 100)) {
-                // Score every 100ms, or 200ms in slow-mo
-                this.scoreManager.increment();
-                this.lastScoreTime = currentTime;
-            }
-
-            // Update dino position
+            // Update the dino's position
             this.dino.updatePosition(
                 GAME_CONSTANTS.PHYSICS.GRAVITY,
                 GAME_CONSTANTS.PHYSICS.JUMP_BOOST_SPEED,
@@ -297,41 +281,58 @@ export class DinoGame {
 
             // Spawn and update obstacles
             this.spawnObstacle();
-            this.obstacles = this.obstacles.filter((obstacle) => {
-                const isActive = obstacle.update(
-                    this.isSlowMotionActive
-                        ? GAME_CONSTANTS.POWER_UPS.SLOW_MOTION.SPEED_MULTIPLIER
-                        : 1,
-                );
-                if (!isActive) {
+
+            // Calculate current speed multiplier
+            const speedMultiplier = this.isSlowMotionActive
+                ? GAME_CONSTANTS.POWER_UPS.SLOW_MOTION.SPEED_MULTIPLIER
+                : 1;
+
+            // Update and filter obstacles in a single pass
+            this.obstacles = this.obstacles.reduce((activeObstacles, obstacle) => {
+                if (obstacle.update(speedMultiplier)) {
+                    // Check for collisions
+                    for (const obstacle of this.obstacles) {
+                        if (isColliding(this.dino, obstacle, { isHole: obstacle.type === 'hole' })) {
+                            if (obstacle.type === 'hole' && !this.dino.isFalling) {
+                                // Handle falling into hole
+                                this.isGameOver = true;
+                                this.dino.fall().then(() => this.gameOver());
+                                this.audioManager.play('fall');
+                            }
+                            else {
+                                this.gameOver();
+                            }
+                        }
+                    }
+                    activeObstacles.push(obstacle);
+                }
+                else {
                     obstacle.remove();
                 }
+                return activeObstacles;
+            }, []);
 
-                return isActive;
-            });
+            // Update game speed
+            if (this.gameSpeed < GAME_CONSTANTS.GAME_SPEED.MAX) {
+                this.gameSpeed += GAME_CONSTANTS.GAME_SPEED.ACCELERATION;
+            }
+
+            // Update score
+            const currentTime = Date.now();
+            if (currentTime - this.lastScoreTime >= (this.isSlowMotionActive ? 200 : 100)) {
+                this.scoreManager.increment();
+                this.lastScoreTime = currentTime;
+            }
 
             // Spawn and update power-ups
             this.spawnPowerUp();
             this.powerUps = this.powerUps.filter((powerUp) => {
-                const isActive = powerUp.update(
-                    this.isSlowMotionActive
-                        ? GAME_CONSTANTS.POWER_UPS.SLOW_MOTION.SPEED_MULTIPLIER
-                        : 1,
-                );
+                const isActive = powerUp.update(speedMultiplier);
                 if (!isActive) {
                     powerUp.remove();
                 }
-
                 return isActive;
             });
-
-            // Check collisions with obstacles
-            for (const obstacle of this.obstacles) {
-                if (isColliding(this.dino, obstacle)) {
-                    this.gameOver();
-                    break;
-                }
-            }
 
             // Check collisions with power-ups
             for (let i = 0; i < this.powerUps.length; i++) {
@@ -344,6 +345,9 @@ export class DinoGame {
                 }
             }
         }
+
+        // Always request next frame first to keep animation smooth
+        requestAnimationFrame(this.animate);
     }
 }
 
