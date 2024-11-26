@@ -31,14 +31,21 @@ export class Obstacle {
         // 🎭 Give our obstacle its costume (like dressing up for Halloween!)
         this.element.className = `obstacle ${type} ${size}`;
 
+        // Store the obstacle type
+        this.type = type;
+
         // 📍 Place the obstacle at the starting position
         this.position = gameContainer.offsetWidth;
         if (type === 'bird') {
             this.element.style.bottom = '100px'; // Birds fly high in the sky! 🦅
+            // Birds move 1x to 1.5x faster than other obstacles!
+            this.speed = speed * (1 + (Math.random() * 0.5));
+        }
+        else {
+            this.speed = speed;
         }
 
-        // 🏃‍♂️ Set how fast it moves
-        this.speed = speed;
+        // Update the position on screen
         this.element.style.left = `${this.position}px`;
         gameContainer.appendChild(this.element);
     }
