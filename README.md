@@ -58,23 +58,23 @@ Here's how our game files are organized:
 
 ```
 DinoRun/
-├── index.html         # The main game page
-├── styles.css         # Makes the game look pretty
+├── index.html             # The main game page
+├── styles.css             # Makes the game look pretty
 ├── core/
-│   └── game.js        # The main game engine 🎮
+│   └── game.js            # The main game engine 🎮
 ├── entities/
-│   ├── dino.js        # Our dinosaur hero! 🦖
-│   ├── obstacle.js    # Things to jump over 🌵
-│   ├── powerup.js     # Special power-ups ⭐
-│   └── mob.js         # Moving creatures to avoid 🦅
+│   ├── dino.js            # Our dinosaur hero! 🦖
+│   ├── obstacle.js        # Things to jump over 🌵
+│   ├── powerup.js         # Special power-ups ⭐
+│   └── mob.js             # Moving creatures to avoid 🦅
 ├── config/
-│   ├── obstacles.js   # Obstacle types and settings
-│   ├── powerups.js    # Power-up types and settings
-│   └── mobs.js        # Mob types and settings
+│   ├── obstacles.js       # Obstacle types and settings
+│   ├── powerups.js        # Power-up types and settings
+│   └── mobs.js            # Mob types and settings
 └── utils/
-    ├── constants.js   # Game settings and constants
-    ├── audio.js       # Sound effects and music 🎵
-    └── entity-helpers.js # Helper functions for game objects
+    ├── constants.js       # Game settings and constants
+    ├── audio.js           # Sound effects and music 🎵
+    └── entity-helpers.js  # Helper functions for game objects
 ```
 
 ## 🎓 Learning from the Code
