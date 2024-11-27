@@ -7,13 +7,14 @@ import { Obstacle } from '../entities/obstacle.js';
 import { PowerUp } from '../entities/powerup.js';
 import { Mob } from '../entities/mob.js';
 import { AudioManager } from '../utils/audio.js';
-import { GAME_CONSTANTS } from '../utils/constants.js';
+import { InputManager } from './input.js';
 import { ScoreManager } from './score.js';
 import { isColliding } from './collision.js';
+import { getRandomEntityType } from '../utils/entity-helpers.js';
+import { GAME_CONSTANTS } from '../utils/constants.js';
 import { MOB_TYPES } from '../config/mobs.js';
 import { OBSTACLE_TYPES } from '../config/obstacles.js';
 import { POWER_UP_TYPES } from '../config/powerups.js';
-import { getRandomEntityType } from '../utils/entity-helpers.js';
 
 /**
  * 🎯 DinoGame is the main class that controls everything in our game
@@ -50,6 +51,10 @@ export class DinoGame {
             document.getElementById('high-score-value'),
         );
 
+        // Set up our controls
+        this.inputManager = new InputManager();
+        this.bindEvents();
+
         // Set up all our game's starting conditions
         this.gameStarted = false;        // Is the game running?
         this.isGameOver = false;         // Did we lose?
@@ -71,15 +76,12 @@ export class DinoGame {
         this.slowMotionTimeout = null;   // Timer for slow motion power-up
         this.isSpeedBoostActive = false; // Is speed boost active?
 
-        // Make sure our dino starts in the right state
+        // Make sure our dino starts in the correct state
         this.dino.element.classList.remove('crouching', 'running', 'dead');
-
-        // Set up our controls
-        this.bindEvents();
 
         // Start our game loop - this keeps everything moving
         this.animate = this.animate.bind(this);
-        requestAnimationFrame(this.animate);
+        this.animationFrameId = requestAnimationFrame(this.animate);
 
         // Make our game available everywhere
         window.game = this;
@@ -90,15 +92,12 @@ export class DinoGame {
      * players press certain keys or click buttons
      */
     bindEvents() {
-        // Watch for when specific keys are pressed
-        document.addEventListener('keydown', (event) => {
-            if (event.code === 'Space' || event.code === 'ArrowUp') {
-                event.preventDefault();
-
+        // Set up input handling
+        this.inputManager.onAction('jump', ({ pressed }) => {
+            if (pressed) {
                 // Start game if not started
                 if (!this.gameStarted && !this.isGameOver) {
                     this.startGame();
-
                     return;
                 }
 
@@ -112,41 +111,26 @@ export class DinoGame {
                         this.audioManager.play('jump', this.isSlowMotionActive ? 0.5 : 1);
                     }
                 }
-
                 this.dino.isSpacePressed = true;
             }
-
-            if (
-                event.code === 'ArrowDown'
-                || event.code === 'ControlLeft'
-                || event.code === 'ControlRight'
-            ) {
-                event.preventDefault();
-                if (this.isGameOver || !this.gameStarted) {
-                    return;
-                }
-
-                this.dino.crouch(true);
+            else {
+                this.dino.isSpacePressed = false;
             }
+        });
 
-            if (event.code === 'Enter' && this.isGameOver) {
+        this.inputManager.onAction('crouch', ({ pressed }) => {
+            if (!this.isGameOver && this.gameStarted) {
+                this.dino.crouch(pressed);
+            }
+        });
+
+        this.inputManager.onAction('restart', ({ pressed }) => {
+            if (pressed && this.isGameOver) {
                 this.restartGame();
             }
         });
 
-        document.addEventListener('keyup', (event) => {
-            if (event.code === 'Space' || event.code === 'ArrowUp') {
-                this.dino.isSpacePressed = false;
-            }
-            else if (
-                event.code === 'ArrowDown'
-                || event.code === 'ControlLeft'
-                || event.code === 'ControlRight'
-            ) {
-                this.dino.crouch(false);
-            }
-        });
-
+        // Button click handling
         this.restartBtn.addEventListener('click', () => this.restartGame());
     }
 
@@ -366,6 +350,25 @@ export class DinoGame {
     }
 
     /**
+     * 🧹 Clean up game resources and finalise
+     */
+    destroy() {
+        // Clean up input manager
+        this.inputManager.destroy();
+
+        // Clean up game entities
+        [...this.obstacles, ...this.powerUps, ...this.mobs].forEach((entity) => entity.remove());
+
+        // Stop animation frame
+        if (this.animationFrameId) {
+            cancelAnimationFrame(this.animationFrameId);
+        }
+
+        // Remove global reference
+        window.game = undefined;
+    }
+
+    /**
      * 🔄 This is our game loop - it runs many times per second to update everything
      */
     animate() {
@@ -471,11 +474,16 @@ export class DinoGame {
         }
 
         // Always request next frame first to keep animation smooth
-        requestAnimationFrame(this.animate);
+        this.animationFrameId = requestAnimationFrame(this.animate);
     }
 }
 
-// Initialize game when DOM is loaded
+// Initialise game when DOM is loaded
 document.addEventListener('DOMContentLoaded', () => {
-    new DinoGame();
+    const game = new DinoGame();
+
+    // Clean up when page unloads
+    window.addEventListener('unload', () => {
+        game.destroy();
+    });
 });

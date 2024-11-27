@@ -3,15 +3,15 @@
  * This file controls how our game looks on the screen
  */
 
-/* Make the whole page centered and use a light gray background */
+/* Make the whole page centred and use a light grey background */
 body {
-    display: flex; /* Use flexbox to center everything */
-    justify-content: center; /* Center horizontally */
-    align-items: center; /* Center vertically */
+    display: flex; /* Use flexbox to centre everything */
+    justify-content: center; /* Centre horizontally */
+    align-items: center; /* Centre vertically */
     height: 100vh; /* Take up the full height of the screen */
     margin: 0; /* Remove any default space around the edges */
     font-family: Arial, sans-serif; /* Use a clean, easy-to-read font */
-    background-color: #f0f0f0; /* Light gray background color */
+    background-color: #f0f0f0; /* Light grey background colour */
 }
 
 /* The container that holds our entire game */
@@ -51,7 +51,7 @@ body {
     right: 5px; /* A little from the right */
     width: 20px; /* Set width */
     height: 20px; /* Set height */
-    background-color: #535353; /* Same color as the body */
+    background-color: #535353; /* Same colour as the body */
     border-radius: 50%; /* Make it a circle */
 }
 
