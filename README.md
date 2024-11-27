@@ -22,11 +22,14 @@ The code is written with lots of helpful comments that explain what's happening 
 ### ✨ Features
 
 - 🦖 Control a cute dinosaur character
-- 🌵 Jump over obstacles like cacti and rocks
+- 🌵 Jump over obstacles like cacti, rocks, and holes
 - 🦅 Duck under flying birds
-- ⌛ Collect power-ups for special abilities
+- ⭐ Collect power-ups with special abilities:
+  - ⏳ Slow Motion: Makes everything move slower
+  - ⚡ Speed Boost: Makes everything move faster
 - 🎵 Sound effects and background music
 - 💫 Kid-friendly code comments to learn programming
+- 📊 High score tracking
 
 ## 🎯 For Kids: How to Play the Game
 
@@ -44,8 +47,9 @@ Hey there, future programmer! 👋 Want to play the game? Here's how:
 5. Open your web browser
 6. Go to: `http://localhost:8000`
 7. Game time! Use these controls:
-   - Press `SPACE` or `UP ARROW` to jump
+   - Press `SPACE` or `UP ARROW` to jump (hold longer to jump higher!)
    - Press `CTRL` or `DOWN ARROW` to duck
+   - Collect power-ups to get special abilities
    - Try to get the highest score!
 
 ## 📁 Project Structure
@@ -55,16 +59,22 @@ Here's how our game files are organized:
 ```
 DinoRun/
 ├── index.html         # The main game page
-├── style.css          # Makes the game look pretty
+├── styles.css         # Makes the game look pretty
 ├── core/
-│   └── game.js        # The main game engine
+│   └── game.js        # The main game engine 🎮
 ├── entities/
 │   ├── dino.js        # Our dinosaur hero! 🦖
 │   ├── obstacle.js    # Things to jump over 🌵
-│   └── powerup.js     # Special power-ups ⌛
+│   ├── powerup.js     # Special power-ups ⭐
+│   └── mob.js         # Moving creatures to avoid 🦅
+├── config/
+│   ├── obstacles.js   # Obstacle types and settings
+│   ├── powerups.js    # Power-up types and settings
+│   └── mobs.js        # Mob types and settings
 └── utils/
-    ├── constants.js   # Game settings
-    └── audio.js       # Sound effects 🎵
+    ├── constants.js   # Game settings and constants
+    ├── audio.js       # Sound effects and music 🎵
+    └── entity-helpers.js # Helper functions for game objects
 ```
 
 ## 🎓 Learning from the Code
@@ -72,11 +82,13 @@ DinoRun/
 Want to learn how the game works? Start by looking at these files:
 
 1. First, check out `index.html` - it's like the game's skeleton
-2. Then look at `dino.js` - it controls our dinosaur character
-3. Try reading `obstacle.js` to see how the obstacles work
-4. Look at `powerup.js` to learn about special abilities
+2. Then look at `core/game.js` - it's the brain of our game!
+3. Check out `entities/dino.js` - it controls our dinosaur character
+4. Try reading `entities/obstacle.js` and `config/obstacles.js` to see how obstacles work
+5. Look at `entities/powerup.js` and `config/powerups.js` to learn about special abilities
+6. Finally, explore `entities/mob.js` and `config/mobs.js` to see how creatures work
 
-All the code has comments that explain what's happening!
+All the code has comments that explain what's happening! We use lots of emoji icons to make it fun and easy to understand.
 
 ## 🛠️ For Others
 

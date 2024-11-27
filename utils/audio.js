@@ -1,6 +1,13 @@
+import { GAME_CONSTANTS } from '../utils/constants.js';
+
+// 🎵 This is where all the fun sounds in our game come from!
+// Just like in your favorite games, we need sounds for:
+// - 🦘 Jumping and landing
+// - ⭐ Collecting power-ups
+// - 💥 Game over moments
+
 /**
- * AudioManager handles all the sound effects in our game.
- * Playing the right sound at the right time!
+ * 🎮 AudioManager makes sure all our game sounds play at just the right time
  *
  * @class AudioManager
  */
@@ -30,7 +37,7 @@ export class AudioManager {
 
         // Set up each sound with the right volume and settings
         Object.values(this.sounds).forEach((sound) => {
-            sound.volume = 0.3; // 30% volume - not too loud!
+            sound.volume = GAME_CONSTANTS.AUDIO.VOLUME;
             sound.preservesPitch = false; // Allow pitch to change with speed
         });
     }
@@ -59,7 +66,7 @@ export class AudioManager {
 
         // Create a fresh copy of the sound to play
         const clone = sound.cloneNode();
-        clone.volume = 0.3; // Keep the volume at 30%
+        clone.volume = GAME_CONSTANTS.AUDIO.VOLUME;
         clone.playbackRate = playbackRate; // Set the speed
         clone.preservesPitch = false; // Let the pitch change with speed
 

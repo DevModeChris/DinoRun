@@ -1,16 +1,28 @@
-// Import all the different parts of our game
+// 🎮 Welcome to our DinoRun game! This is where all the magic happens.
+// Think of this file as the brain of our game - it makes everything work together!
+
+// First, let's get all the tools we need for our game
 import { Dino } from '../entities/dino.js';
 import { Obstacle } from '../entities/obstacle.js';
 import { PowerUp } from '../entities/powerup.js';
+import { Mob } from '../entities/mob.js';
 import { AudioManager } from '../utils/audio.js';
 import { GAME_CONSTANTS } from '../utils/constants.js';
 import { ScoreManager } from './score.js';
 import { isColliding } from './collision.js';
+import { MOB_TYPES } from '../config/mobs.js';
+import { OBSTACLE_TYPES } from '../config/obstacles.js';
+import { POWER_UP_TYPES } from '../config/powerups.js';
+import { getRandomEntityType } from '../utils/entity-helpers.js';
 
 /**
- * DinoGame is the main class that controls everything in our game.
- * Think of it like the game engine in Fortnite - it makes sure all the parts of
- * (dino, obstacles, scoring, etc.) work together in harmony!
+ * 🎯 DinoGame is the main class that controls everything in our game
+ * Think of it like the game engine in Fortnite - it makes sure all parts work together:
+ * - 🦖 The dino jumps and runs
+ * - 🌵 Obstacles appear to dodge
+ * - ⭐ Power-ups give special abilities
+ * - 🎵 Music and sound effects play
+ * - 📊 Score keeps track of how well you're doing
  */
 export class DinoGame {
     /**
@@ -18,54 +30,63 @@ export class DinoGame {
      * It's called automatically when we create a new game.
      */
     constructor() {
-        // First, we get all the elements from our HTML that we'll need
+        // First, let's get all the things we can see on the screen
         this.dino = new Dino(document.getElementById('dino'));
-        this.gameContainer = document.getElementById('game');
+        this.gameContainer = document.getElementById('game-container');
         this.startScreen = document.getElementById('start-screen');
         this.gameOverScreen = document.getElementById('game-over-screen');
 
-        // Get the score container and its child elements
+        // Get the places where we'll show the score
         this.finalScoreContainer = document.getElementById('final-score-container');
         this.finalScoreElement = this.finalScoreContainer.querySelector('.final-score');
         this.highScoreMessage = document.querySelector('.high-score-message');
 
         this.restartBtn = document.getElementById('restart-btn');
 
-        // Create our helper managers for sound and scoring
+        // Create our sound player and score keeper
         this.audioManager = new AudioManager();
         this.scoreManager = new ScoreManager(
             document.getElementById('score-value'),
             document.getElementById('high-score-value'),
         );
 
-        // Set up our game's starting conditions
-        this.gameStarted = false; // The game hasn't started yet
-        this.isGameOver = false; // The game isn't over yet
-        this.gameSpeed = GAME_CONSTANTS.GAME_SPEED.INITIAL; // How fast the game moves
-        this.obstacles = []; // List to keep track of all obstacles
-        this.powerUps = []; // List to keep track of all power-ups
-        this.lastObstacleTime = 0; // When did we last create an obstacle?
-        this.lastPowerUpTime = 0; // When did we last create a power-up?
-        this.lastScoreTime = 0; // When did we last update the score?
-        this.isSlowMotionActive = false; // Is slow-motion power-up active?
-        this.slowMotionTimeout = null; // Timer for slow-motion power-up
+        // Set up all our game's starting conditions
+        this.gameStarted = false;        // Is the game running?
+        this.isGameOver = false;         // Did we lose?
+        this.gameSpeed = GAME_CONSTANTS.GAME_SPEED.INITIAL;  // How fast everything moves
 
-        // Make sure dino starts in the correct state
+        // Lists to keep track of everything in our game
+        this.obstacles = [];             // Things to jump over
+        this.powerUps = [];             // Special powers to collect
+        this.mobs = [];                 // Moving creatures to avoid
+
+        // Timers to control when new things appear
+        this.lastObstacleSpawnTime = 0;  // When did we last add an obstacle?
+        this.lastPowerUpSpawnTime = 0;   // When did we last add a power-up?
+        this.lastMobSpawnTime = 0;       // When did we last add a mob?
+        this.lastScoreTime = 0;          // When did we last update the score?
+
+        // Special power-up effects
+        this.isSlowMotionActive = false; // Is everything moving in slow motion?
+        this.slowMotionTimeout = null;   // Timer for slow motion power-up
+        this.isSpeedBoostActive = false; // Is speed boost active?
+
+        // Make sure our dino starts in the right state
         this.dino.element.classList.remove('crouching', 'running', 'dead');
 
-        // Set up our event listeners (watching for player actions)
+        // Set up our controls
         this.bindEvents();
 
-        // Start our game loop
+        // Start our game loop - this keeps everything moving
         this.animate = this.animate.bind(this);
         requestAnimationFrame(this.animate);
 
-        // Expose game instance globally
+        // Make our game available everywhere
         window.game = this;
     }
 
     /**
-     * bindEvents sets up all our controls - what should happen when
+     * 🎮 Sets up all our controls - what should happen when
      * players press certain keys or click buttons
      */
     bindEvents() {
@@ -73,13 +94,19 @@ export class DinoGame {
         document.addEventListener('keydown', (event) => {
             if (event.code === 'Space' || event.code === 'ArrowUp') {
                 event.preventDefault();
-                if (!this.isGameOver && !this.gameStarted) {
+
+                // Start game if not started
+                if (!this.gameStarted && !this.isGameOver) {
                     this.startGame();
+
+                    return;
                 }
-                else if (!this.isGameOver) {
+
+                // Handle jumping
+                if (!this.isGameOver) {
                     // Only play jump sound if we actually start a new jump
                     const didJumpStart = this.dino.jump(
-                        GAME_CONSTANTS.PHYSICS.JUMP_STRENGTH,
+                        GAME_CONSTANTS.PHYSICS.INITIAL_JUMP_SPEED,
                     );
                     if (didJumpStart) {
                         this.audioManager.play('jump', this.isSlowMotionActive ? 0.5 : 1);
@@ -88,7 +115,8 @@ export class DinoGame {
 
                 this.dino.isSpacePressed = true;
             }
-            else if (
+
+            if (
                 event.code === 'ArrowDown'
                 || event.code === 'ControlLeft'
                 || event.code === 'ControlRight'
@@ -100,7 +128,8 @@ export class DinoGame {
 
                 this.dino.crouch(true);
             }
-            else if (event.code === 'Enter' && this.isGameOver) {
+
+            if (event.code === 'Enter' && this.isGameOver) {
                 this.restartGame();
             }
         });
@@ -122,23 +151,30 @@ export class DinoGame {
     }
 
     /**
-     * startGame begins the game when the player first presses the spacebar
+     * 🏃‍♂️‍➡️ Begins the game when the player first presses the spacebar
      */
     startGame() {
-        this.gameStarted = true;
-        this.startScreen.style.display = 'none';
-        this.dino.element.classList.add('running');
+        if (this.isGameOver) {
+            return;
+        }
 
-        // Reset the score timer when game starts
+        // Hide the start screen
+        this.startScreen.style.display = 'none';
+
+        // Start the game
+        this.gameStarted = true;
         this.lastScoreTime = Date.now();
+        this.lastPowerUpSpawnTime = Date.now();
+        this.dino.element.classList.add('running');
     }
 
     /**
-     * gameOver handles what happens when the dino hits an obstacle
+     * 💀 Handles what happens when the dino hits an obstacle
      */
     gameOver() {
         // Set game over state
         this.isGameOver = true;
+        this.gameStarted = false;
 
         // Get the current score and check if it's a new high score
         const currentScore = this.scoreManager.getScore(false);
@@ -169,22 +205,26 @@ export class DinoGame {
     }
 
     /**
-     * restartGame resets everything to start a new game
+     * 🔁 Resets everything to start a new game
      */
     restartGame() {
         // Reset game state
         this.isGameOver = false;
         this.gameSpeed = GAME_CONSTANTS.GAME_SPEED.INITIAL;
 
-        // Clear objects
-        this.obstacles.forEach((obstacle) => obstacle.remove());
-        this.powerUps.forEach((powerUp) => powerUp.remove());
+        // Clean up all game entities
+        [...this.obstacles, ...this.powerUps, ...this.mobs].forEach((entity) => entity.remove());
+
+        // Reset arrays
         this.obstacles = [];
         this.powerUps = [];
-        this.lastObstacleTime = 0;
-        this.lastPowerUpTime = 0;
+        this.mobs = [];
+        this.lastObstacleSpawnTime = 0;
+        this.lastPowerUpSpawnTime = 0;
+        this.lastMobSpawnTime = 0;
         this.lastScoreTime = 0;
         this.deactivateSlowMotion();
+        this.deactivateSpeedBoost();
 
         // Reset the dino
         this.dino.reset();
@@ -203,66 +243,126 @@ export class DinoGame {
     }
 
     /**
-     * spawnObstacle creates new obstacles for the dino to jump over
+     * 🪨 Creates new obstacles for the dino to jump over
      */
     spawnObstacle() {
+        // Don't spawn if game hasn't started
+        if (!this.gameStarted || this.isGameOver) {
+            return;
+        }
+
         const currentTime = Date.now();
-        const timeSinceLastObstacle = currentTime - this.lastObstacleTime;
-        const minInterval = this.isSlowMotionActive
-            ? GAME_CONSTANTS.OBSTACLE.MIN_INTERVAL / GAME_CONSTANTS.POWER_UPS.SLOW_MOTION.SPEED_MULTIPLIER
-            : GAME_CONSTANTS.OBSTACLE.MIN_INTERVAL;
+        const timeSinceLastObstacle = currentTime - this.lastObstacleSpawnTime;
 
-        if (timeSinceLastObstacle > minInterval) {
-            // Add random delay between min and max interval
-            const randomDelay = Math.random() * (GAME_CONSTANTS.OBSTACLE.MAX_INTERVAL - GAME_CONSTANTS.OBSTACLE.MIN_INTERVAL);
-
-            if (timeSinceLastObstacle > minInterval + randomDelay) {
-                this.obstacles.push(new Obstacle(this.gameContainer, this.gameSpeed));
-                this.lastObstacleTime = currentTime;
+        // Only spawn if enough time has passed since last spawn
+        if (timeSinceLastObstacle >= GAME_CONSTANTS.OBSTACLE.MIN_INTERVAL) {
+            const obstacleType = getRandomEntityType(OBSTACLE_TYPES);
+            if (obstacleType !== null) {
+                const obstacle = new Obstacle(this.gameContainer, OBSTACLE_TYPES[obstacleType]);
+                this.obstacles.push(obstacle);
+                this.lastObstacleSpawnTime = currentTime;
             }
         }
     }
 
     /**
-     * spawnPowerUp creates new power-ups that give special abilities
+     * 🐣 Creates new mobs that move with their own behaviour
      */
-    spawnPowerUp() {
-        const currentTime = Date.now();
-        const timeSinceLastPowerUp = currentTime - this.lastPowerUpTime;
+    spawnMob() {
+        // Don't spawn if game hasn't started
+        if (!this.gameStarted || this.isGameOver) {
+            return;
+        }
 
-        if (timeSinceLastPowerUp > GAME_CONSTANTS.POWER_UPS.MIN_INTERVAL) {
-            this.powerUps.push(new PowerUp(this.gameContainer, this.gameSpeed));
-            this.lastPowerUpTime = currentTime;
+        const currentTime = Date.now();
+        const timeSinceLastMob = currentTime - this.lastMobSpawnTime;
+
+        // Only spawn if enough time has passed since last spawn
+        if (timeSinceLastMob < GAME_CONSTANTS.MOB.MIN_INTERVAL) {
+            return;
+        }
+
+        // Random chance to spawn when interval is met
+        if (Math.random() < GAME_CONSTANTS.MOB.SPAWN_CHANCE) {
+            const mobType = getRandomEntityType(MOB_TYPES);
+            if (mobType !== null) {
+                const mob = new Mob(this.gameContainer, MOB_TYPES[mobType]);
+                this.mobs.push(mob);
+                this.lastMobSpawnTime = currentTime;
+            }
         }
     }
 
     /**
-     * activateSlowMotion handles what happens when the dino collects a slow-motion power-up
+     * 🎁 Creates new power-ups for the dino to collect
+     */
+    spawnPowerUp() {
+        // Don't spawn if game hasn't started
+        if (!this.gameStarted || this.isGameOver) {
+            return;
+        }
+
+        const currentTime = Date.now();
+        const timeSinceLastPowerUp = currentTime - this.lastPowerUpSpawnTime;
+
+        // Only spawn if enough time has passed
+        if (timeSinceLastPowerUp < GAME_CONSTANTS.POWER_UPS.MIN_INTERVAL) {
+            return;
+        }
+
+        // Random chance to spawn when interval is met
+        if (Math.random() < GAME_CONSTANTS.POWER_UPS.SPAWN_CHANCE) {
+            const powerUpType = getRandomEntityType(POWER_UP_TYPES);
+            if (powerUpType !== null) {
+                const powerUp = new PowerUp(this.gameContainer, POWER_UP_TYPES[powerUpType]);
+                this.powerUps.push(powerUp);
+                this.lastPowerUpSpawnTime = currentTime;
+            }
+        }
+    }
+
+    /**
+     * 🎯 Handles what happens when the dino collects a power-up
+     * @param {PowerUp} powerUp - The power-up that was collected
+     */
+    collectPowerUp(powerUp) {
+        // Remove from active power-ups list
+        this.powerUps = this.powerUps.filter((p) => p !== powerUp);
+
+        // Apply power-up effects
+        powerUp.collect(this);
+    }
+
+    /**
+     * ⏰ Activates slow motion effect
      */
     activateSlowMotion() {
         this.isSlowMotionActive = true;
         document.body.classList.add('slow-motion');
-
-        if (this.slowMotionTimeout) {
-            clearTimeout(this.slowMotionTimeout);
-        }
-
-        this.slowMotionTimeout = setTimeout(() => {
-            this.deactivateSlowMotion();
-        }, GAME_CONSTANTS.POWER_UPS.SLOW_MOTION.DURATION);
     }
 
     /**
-     * deactivateSlowMotion handles what happens when the slow-motion power-up ends
+     * ⏰ Deactivates slow motion effect
      */
     deactivateSlowMotion() {
         this.isSlowMotionActive = false;
         document.body.classList.remove('slow-motion');
+    }
 
-        if (this.slowMotionTimeout) {
-            clearTimeout(this.slowMotionTimeout);
-            this.slowMotionTimeout = null;
-        }
+    /**
+     * ⚡ Activates speed boost effect
+     */
+    activateSpeedBoost() {
+        this.isSpeedBoostActive = true;
+        this.gameSpeed *= GAME_CONSTANTS.POWER_UPS.SPEED_BOOST.SPEED_MULTIPLIER;
+    }
+
+    /**
+     * ⚡ Deactivates speed boost effect
+     */
+    deactivateSpeedBoost() {
+        this.isSpeedBoostActive = false;
+        this.gameSpeed /= GAME_CONSTANTS.POWER_UPS.SPEED_BOOST.SPEED_MULTIPLIER;
     }
 
     /**
@@ -279,29 +379,55 @@ export class DinoGame {
                 GAME_CONSTANTS.POWER_UPS.SLOW_MOTION.SPEED_MULTIPLIER,
             );
 
+            // Calculate current speed multiplier
+            let speedMultiplier = 1;
+            if (this.isSlowMotionActive) {
+                speedMultiplier *= GAME_CONSTANTS.POWER_UPS.SLOW_MOTION.SPEED_MULTIPLIER;
+            }
+            if (this.isSpeedBoostActive) {
+                speedMultiplier *= GAME_CONSTANTS.POWER_UPS.SPEED_BOOST.SPEED_MULTIPLIER;
+            }
+
             // Spawn and update obstacles
             this.spawnObstacle();
 
-            // Calculate current speed multiplier
-            const speedMultiplier = this.isSlowMotionActive
-                ? GAME_CONSTANTS.POWER_UPS.SLOW_MOTION.SPEED_MULTIPLIER
-                : 1;
+            // Spawn and update mobs
+            this.spawnMob();
+
+            // Spawn and update power-ups
+            this.spawnPowerUp();
+
+            // Update and filter mobs in a single pass
+            this.mobs = this.mobs.reduce((activeMobs, mob) => {
+                if (mob.update(speedMultiplier, this.gameSpeed)) {
+                    // Check for collisions with mobs
+                    if (isColliding(this.dino, mob)) {
+                        this.gameOver();
+                    }
+                    activeMobs.push(mob);
+                }
+                else {
+                    mob.remove();
+                }
+
+                return activeMobs;
+            }, []);
 
             // Update and filter obstacles in a single pass
             this.obstacles = this.obstacles.reduce((activeObstacles, obstacle) => {
-                if (obstacle.update(speedMultiplier)) {
-                    // Check for collisions
-                    for (const obstacle of this.obstacles) {
-                        if (isColliding(this.dino, obstacle, { isHole: obstacle.type === 'hole' })) {
-                            if (obstacle.type === 'hole' && !this.dino.isFalling) {
-                                // Handle falling into hole
-                                this.isGameOver = true;
-                                this.dino.fall().then(() => this.gameOver());
-                                this.audioManager.play('fall');
-                            }
-                            else {
-                                this.gameOver();
-                            }
+                if (obstacle.update(speedMultiplier, this.gameSpeed)) {
+                    // Check for collisions with obstacles
+                    if (isColliding(this.dino, obstacle, {
+                        isHole: obstacle.type === 'hole',
+                    })) {
+                        if (obstacle.type === 'hole' && !this.dino.isFalling) {
+                            // Handle falling into hole
+                            this.isGameOver = true;
+                            this.dino.fall().then(() => this.gameOver());
+                            this.audioManager.play('fall');
+                        }
+                        else {
+                            this.gameOver();
                         }
                     }
                     activeObstacles.push(obstacle);
@@ -309,7 +435,26 @@ export class DinoGame {
                 else {
                     obstacle.remove();
                 }
+
                 return activeObstacles;
+            }, []);
+
+            // Update and filter power-ups in a single pass
+            this.powerUps = this.powerUps.reduce((activePowerUps, powerUp) => {
+                if (powerUp.update(speedMultiplier, this.gameSpeed)) {
+                    // Check for collisions with power-ups
+                    if (isColliding(this.dino, powerUp)) {
+                        this.collectPowerUp(powerUp);
+                        powerUp.remove();
+                        return activePowerUps;
+                    }
+                    activePowerUps.push(powerUp);
+                }
+                else {
+                    powerUp.remove();
+                }
+
+                return activePowerUps;
             }, []);
 
             // Update game speed
@@ -322,27 +467,6 @@ export class DinoGame {
             if (currentTime - this.lastScoreTime >= (this.isSlowMotionActive ? 200 : 100)) {
                 this.scoreManager.increment();
                 this.lastScoreTime = currentTime;
-            }
-
-            // Spawn and update power-ups
-            this.spawnPowerUp();
-            this.powerUps = this.powerUps.filter((powerUp) => {
-                const isActive = powerUp.update(speedMultiplier);
-                if (!isActive) {
-                    powerUp.remove();
-                }
-                return isActive;
-            });
-
-            // Check collisions with power-ups
-            for (let i = 0; i < this.powerUps.length; i++) {
-                const powerUp = this.powerUps[i];
-                if (isColliding(this.dino, powerUp)) {
-                    powerUp.remove();
-                    this.powerUps.splice(i, 1);
-                    this.activateSlowMotion();
-                    break;
-                }
             }
         }
 

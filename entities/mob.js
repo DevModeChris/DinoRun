@@ -1,93 +1,96 @@
-/**
- * 🌵 Obstacles are the things our dino needs to dodge!
- * They make the game challenging and fun, just like:
- * - Pipes in Mario
- * - Spikes in Sonic
- * - Lava in Minecraft
- *
- * 🎮 The Obstacle class creates things for our dino to jump over or duck under
- * Each obstacle is unique and needs different skills to avoid!
- */
-
 import { GAME_CONSTANTS } from '../utils/constants.js';
 import { getRandomSize } from '../utils/entity-helpers.js';
 
-export class Obstacle {
+// 🦊 Mobs are special creatures that move around in our game!
+// They can fly, hop, or run - each with their own special behaviour.
+
+/**
+ * 🎮 The Mob class creates different types of creatures that move in unique ways
+ */
+export class Mob {
     /**
-     * 🎮 Initialising a New Obstacle
-     *
-     * @param {HTMLElement} gameContainer - The game container element
-     * @param {object} config - Obstacle configuration
+     * Create a new mob
+     * @param {HTMLElement} gameContainer - Game container element
+     * @param {Object} config - Configuration for this mob
      */
     constructor(gameContainer, config) {
-        // Create the obstacle's look
         this.element = document.createElement('div');
         this.config = config;
 
-        // Get random size if sizes are configured
+        // Get random size
         this.size = getRandomSize(config.sizes);
         const sizeMultiplier = config.sizeMultipliers?.[this.size] || 1;
 
         // Calculate dimensions
         this.width = (config.baseWidth || config.width) * sizeMultiplier;
-
-        // For holes, only apply multiplier to width, not height
-        this.height = config.type === 'hole'
-            ? (config.baseHeight || config.height)
-            : (config.baseHeight || config.height) * sizeMultiplier;
+        this.height = (config.baseHeight || config.height) * sizeMultiplier;
 
         // Set position
         this.x = window.innerWidth;
-        this.y = config.bottom || 20; // Default to ground height if not specified
-        this.type = config.type;
+        this.y = config.getRandomHeight
+            ? config.getRandomHeight()
+            : config.bottom || 100; // Use random height if available, otherwise use config.bottom
+
+        // Calculate speed based on config or use default
+        this.speed = config.getSpeed
+            ? config.getSpeed(GAME_CONSTANTS.GAME_SPEED.INITIAL)
+            : GAME_CONSTANTS.GAME_SPEED.INITIAL;
 
         // Set up base class and any additional classes
-        this.element.className = 'obstacle';
+        this.element.className = 'mob';
         if (config.className) {
             this.element.classList.add(config.className);
         }
         if (this.size) {
             this.element.classList.add(this.size);
         }
-        if (config.class) {
-            this.element.classList.add(config.class);
-        }
 
         // Add to game container first
         gameContainer.appendChild(this.element);
 
-        // Apply all styles
+        // Apply position and dimension styles
         Object.assign(this.element.style, {
             position: 'absolute',
             width: `${this.width}px`,
             height: `${this.height}px`,
             left: `${this.x}px`,
             bottom: `${this.y}px`,
-            backgroundColor: config.backgroundColor || '#2ecc71',
+            backgroundColor: config.backgroundColor || '#4a90e2',
             zIndex: '2',
-            ...config.styles,
+            borderRadius: '4px',
+            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
         });
+
+        // Apply animations if defined
+        if (config.animations?.fly) {
+            const flyAnim = config.animations.fly;
+            this.element.animate(flyAnim.keyframes, {
+                duration: flyAnim.duration * 1000,
+                iterations: Infinity,
+                easing: 'ease-in-out',
+            });
+        }
     }
 
     /**
-     * 🔄 Update the obstacle's position and check if it's still active
+     * 🔄 Update the mob's position and check if it's still active
      *
      * @param {number} speedMultiplier - Current game speed multiplier
      * @param {number} gameSpeed - Current game speed
-     * @returns {boolean} - Whether the obstacle is still active
+     * @returns {boolean} - Whether the mob is still active
      */
     update(speedMultiplier = 1, gameSpeed) {
         // Move at the current game speed
         this.x -= (gameSpeed || GAME_CONSTANTS.GAME_SPEED.INITIAL) * speedMultiplier;
         this.element.style.left = `${this.x}px`;
 
-        // Return true if the obstacle is still on screen
+        // Return true if the mob is still on screen
         return this.x + this.width > 0;
     }
 
     /**
-     * 🎯 Get Collision Box
-     * This tells us exactly where our obstacle is for checking collisions
+     * Get the mob's hitbox
+     * @returns {object} - Hitbox coordinates and dimensions
      */
     getHitbox() {
         const rect = this.element.getBoundingClientRect();
@@ -100,11 +103,7 @@ export class Obstacle {
     }
 
     /**
-     * 🚮 Removing the Obstacle
-     *
-     * When our obstacle is no longer needed, we tidy up and remove it
-     * from the game, this helps keep the game running smoothly by freeing up
-     * memory and resources!
+     * Remove the mob's element from the DOM
      */
     remove() {
         this.element.remove();

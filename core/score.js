@@ -1,9 +1,15 @@
 /**
- * ScoreManager handles everything related to keeping track of the player's score
+ * 🎮 ScoreManager handles everything related to keeping track of the player's score
  * and managing the high score.
  */
 export class ScoreManager {
     /**
+     * 🏆 This is where we keep track of your high score!
+     * Just like in arcade games, we want to:
+     * - 📊 Count your points while you play
+     * - 🌟 Save your best score
+     * - 🎯 Show you when you beat your record!
+     *
      * Initialises the score manager with the elements that show the scores
      * @param {HTMLElement} scoreElement - Where to show the current score
      * @param {HTMLElement} highScoreElement - Where to show the highest score ever achieved

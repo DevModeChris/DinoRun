@@ -1,37 +1,68 @@
 /**
- * GAME_CONSTANTS holds all the numbers that control how our game behaves.
- * By keeping them all in one place, it's easy to adjust them and see how they change the game!
+ * 🎮 Welcome to the Game Settings!
+ * This is like the control panel of our game where we can adjust everything:
+ * - 🏃 How fast things move
+ * - 🦘 How high our dino can jump
+ * - ⭐ How powerful the power-ups are
+ * - 🎵 How the sounds work
+ * Think of it like adjusting the settings in Minecraft or Roblox!
+ */
+
+/**
+ * 🎯 GAME_CONSTANTS holds all the special numbers that make our game work
+ * It's like a recipe book that tells us exactly how everything should behave
  */
 export const GAME_CONSTANTS = {
-    // Physics controls how things move in our game
-    PHYSICS: {
-        GRAVITY: 0.9, // How strongly gravity pulls the player down
-        JUMP_STRENGTH: 15, // How high the player jumps
-        MAX_JUMP_STRENGTH: 20, // Maximum jump height when holding space
-        JUMP_BOOST_SPEED: 0.4, // How much extra boost holding space gives
-        MAX_BOOST_TIME: 260, // How long you can boost a jump
-    },
-
-    // Game speed controls how fast everything moves
+    // 🏃 Game Speed Settings - How fast everything moves
     GAME_SPEED: {
-        INITIAL: 3.5, // Starting speed of the game
-        MAX: 7, // Fastest the game can go
-        ACCELERATION: 0.001, // How quickly the game speeds up
+        INITIAL: 5,          // How fast we start (like level 1)
+        MAX: 12,            // Top speed (like max level)
+        ACCELERATION: 0.005, // How quickly we speed up (like leveling up)
     },
 
-    // Power-ups are special items that help the player
+    // 🌍 Physics - How things move in our game world
+    PHYSICS: {
+        GRAVITY: 1200,           // How strongly gravity pulls down (bigger = harder jumps)
+        INITIAL_JUMP_SPEED: 400, // Starting speed when jump begins
+        JUMP_BOOST_SPEED: 1200,  // Extra power when holding jump button
+        MAX_BOOST_TIME: 250,     // How long you can boost a jump (in milliseconds)
+    },
+
+    // ⭐ Power-Up Settings - Special abilities that make the game extra fun!
     POWER_UPS: {
+        MIN_INTERVAL: 20000,         // Wait at least 20 second between power-ups
+        MAX_INTERVAL: 40000,         // Wait at most 40 seconds between power-ups
+        SPAWN_CHANCE: 0.2,           // 20% chance to spawn when interval is met
+
+        // ⏳ Slow Motion Power-Up - Makes everything move in slow-mo, like in The Matrix!
         SLOW_MOTION: {
-            DURATION: 5000, // How long slow motion lasts (in milliseconds)
-            SPEED_MULTIPLIER: 0.5, // How much slower everything moves (0.5 = half speed)
+            DURATION: 5000,           // How long it lasts (5 seconds)
+            SPEED_MULTIPLIER: 0.5,    // How much slower everything moves
         },
-        MIN_INTERVAL: 10000, // Minimum time between power-ups
-        MAX_INTERVAL: 20000, // Maximum time between power-ups
+
+        // ⚡ Speed Boost Power-Up - Makes everything move faster!
+        SPEED_BOOST: {
+            DURATION: 3000,           // How long it lasts (3 seconds)
+            SPEED_MULTIPLIER: 1.2,    // How much faster everything moves
+        },
     },
 
-    // Obstacle settings control how often obstacles appear
+    // 🚧 Obstacle Settings
     OBSTACLE: {
-        MIN_INTERVAL: 2000, // Minimum time between obstacles
-        MAX_INTERVAL: 4000, // Maximum time between obstacles
+        MIN_INTERVAL: 1500,   // Minimum time between obstacles (1.5 seconds)
+        MAX_INTERVAL: 4000,   // Maximum time between obstacles (4 seconds)
+        SPAWN_CHANCE: 0.6,    // 60% chance to spawn when allowed
+    },
+
+    // 🐦 Moving Creature (Mob) Settings
+    MOB: {
+        MIN_INTERVAL: 3000,   // Minimum time between mobs (3 seconds)
+        MAX_INTERVAL: 6000,   // Maximum time between mobs (6 seconds)
+        SPAWN_CHANCE: 0.3,    // 30% chance to spawn when allowed
+    },
+
+    // 🎵 Sound Settings - All the fun noises in our game!
+    AUDIO: {
+        VOLUME: 0.3,                // How loud the sounds are (0 = quiet, 1 = loud)
     },
 };
