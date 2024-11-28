@@ -80,8 +80,9 @@ export class Mob {
      * @returns {boolean} - Whether the mob is still active
      */
     update(speedMultiplier = 1, gameSpeed) {
-        // Move at the current game speed
-        this.x -= (gameSpeed || GAME_CONSTANTS.GAME_SPEED.INITIAL) * speedMultiplier;
+        // Move at the mob's own speed, scaled by game speed and multiplier
+        const effectiveSpeed = this.speed * (gameSpeed / GAME_CONSTANTS.GAME_SPEED.INITIAL);
+        this.x -= effectiveSpeed * speedMultiplier;
         this.element.style.left = `${this.x}px`;
 
         // Return true if the mob is still on screen
