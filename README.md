@@ -1,7 +1,5 @@
 # 🦖 Dino Run Game
 
-Try the live demo here: [Play DinoRun](https://devmodechris.github.io/DinoRun/)
-
 ![HTML5](https://img.shields.io/badge/html5-%23E34F26.svg?style=for-the-badge&logo=html5&logoColor=white)
 ![CSS3](https://img.shields.io/badge/css3-%231572B6.svg?style=for-the-badge&logo=css3&logoColor=white)
 ![JavaScript](https://img.shields.io/badge/javascript-%23323330.svg?style=for-the-badge&logo=javascript&logoColor=%23F7DF1E)
@@ -9,7 +7,9 @@ Try the live demo here: [Play DinoRun](https://devmodechris.github.io/DinoRun/)
 ![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
 ![ESLint](https://img.shields.io/badge/ESLint-4B3263?style=for-the-badge&logo=eslint&logoColor=white)
 
-Welcome to Dino Run! This is a fun browser game where you help a brave little dinosaur run and jump over obstacles. But this isn't just any game - it's also a cool way to learn about coding! 
+Welcome to Dino Run! This is a fun browser game where you help a brave little dinosaur run and jump over obstacles. But this isn't just any game - it's also a cool way to learn about coding!
+
+Try the live demo here: [Play DinoRun](https://devmodechris.github.io/DinoRun/)
 
 ## 🎮 About This Project
 
