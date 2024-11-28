@@ -47,8 +47,14 @@ Hey there, future programmer! 👋 Want to play the game? Here's how:
 5. Open your web browser
 6. Go to: `http://localhost:8000`
 7. Game time! Use these controls:
-   - Press `SPACE` or `UP ARROW` to jump (hold longer to jump higher!)
-   - Press `CTRL` or `DOWN ARROW` to duck
+   - On Desktop:
+     - Press `SPACE` or `UP ARROW` to jump (hold longer to jump higher!)
+     - Press `CTRL` or `DOWN ARROW` to duck
+     - Press `ENTER` or click 'Try Again' to restart when game over
+   - On Mobile:
+     - Touch and hold left side of screen to jump
+     - Touch and hold right side of screen to crouch
+     - Tap 'Try Again' button or swipe vertically when game over to restart
    - Collect power-ups to get special abilities
    - Try to get the highest score!
 
@@ -58,23 +64,26 @@ Here's how our game files are organized:
 
 ```
 DinoRun/
-├── index.html             # The main game page
-├── styles.css             # Makes the game look pretty
+├── index.html            # The main game page
+├── styles.css            # Makes the game look pretty
 ├── core/
-│   └── game.js            # The main game engine 🎮
+│   ├── game.js           # The main game engine 🎮
+│   ├── input.js          # Handles keyboard and touch controls 🎮
+│   ├── score.js          # Keeps track of your score 📊
+│   └── collision.js      # Checks when things bump into each other 💥
 ├── entities/
-│   ├── dino.js            # Our dinosaur hero! 🦖
-│   ├── obstacle.js        # Things to jump over 🌵
-│   ├── powerup.js         # Special power-ups ⭐
-│   └── mob.js             # Moving creatures to avoid 🦅
+│   ├── dino.js           # Our dinosaur hero! 🦖
+│   ├── obstacle.js       # Things to jump over 🌵
+│   ├── powerup.js        # Special power-ups ⭐
+│   └── mob.js            # Moving creatures to avoid 🦅
 ├── config/
-│   ├── obstacles.js       # Obstacle types and settings
-│   ├── powerups.js        # Power-up types and settings
-│   └── mobs.js            # Mob types and settings
+│   ├── obstacles.js      # Obstacle types and settings
+│   ├── powerups.js       # Power-up types and settings
+│   └── mobs.js           # Mob types and settings
 └── utils/
-    ├── constants.js       # Game settings and constants
-    ├── audio.js           # Sound effects and music 🎵
-    └── entity-helpers.js  # Helper functions for game objects
+    ├── constants.js      # Game settings and constants
+    ├── audio.js          # Sound effects and music 🎵
+    └── entity-helpers.js # Helper functions for game objects
 ```
 
 ## 🎓 Learning from the Code
@@ -83,10 +92,11 @@ Want to learn how the game works? Start by looking at these files:
 
 1. First, check out `index.html` - it's like the game's skeleton
 2. Then look at `core/game.js` - it's the brain of our game!
-3. Check out `entities/dino.js` - it controls our dinosaur character
-4. Try reading `entities/obstacle.js` and `config/obstacles.js` to see how obstacles work
-5. Look at `entities/powerup.js` and `config/powerups.js` to learn about special abilities
-6. Finally, explore `entities/mob.js` and `config/mobs.js` to see how creatures work
+3. Look at `core/input.js` - it handles all the controls
+4. Check out `entities/dino.js` - it controls our dinosaur character
+5. Try reading `entities/obstacle.js` and `config/obstacles.js` to see how obstacles work
+6. Look at `entities/powerup.js` and `config/powerups.js` to learn about special abilities
+7. Finally, explore `entities/mob.js` and `config/mobs.js` to see how creatures work
 
 All the code has comments that explain what's happening! We use lots of emoji icons to make it fun and easy to understand.
 

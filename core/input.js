@@ -14,6 +14,7 @@ export class InputManager {
         // Track key and touch states
         this.keyStates = new Map();
         this.touchStartY = 0;
+        this.touchStartX = 0;
 
         // Callback storage
         this.actionCallbacks = new Map();
@@ -99,12 +100,17 @@ export class InputManager {
     _handleTouchStart(event) {
         event.preventDefault();
         const touch = event.touches[0];
+        const screenWidth = window.innerWidth;
+
+        // Store touch start position
+        this.touchStartX = touch.clientX;
         this.touchStartY = touch.clientY;
 
-        // Trigger jump on touch if game over (acts as restart)
-        const callback = this.actionCallbacks.get('jump');
+        // Determine action based on which half of the screen was touched
+        const action = touch.clientX < screenWidth / 2 ? 'jump' : 'crouch';
+        const callback = this.actionCallbacks.get(action);
         if (callback) {
-            callback({ pressed: true, action: 'jump' });
+            callback({ pressed: true, action });
         }
     }
 
@@ -114,22 +120,17 @@ export class InputManager {
      */
     _handleTouchMove(event) {
         event.preventDefault();
+
+        // Touch move is only used for the restart gesture
         const touch = event.touches[0];
         const deltaY = touch.clientY - this.touchStartY;
+        const deltaX = touch.clientX - this.touchStartX;
 
-        // If swiping down, trigger crouch
-        if (deltaY > 30) {
-            const callback = this.actionCallbacks.get('crouch');
+        // If significant vertical swipe while game is over, trigger restart
+        if (Math.abs(deltaY) > 50 && Math.abs(deltaY) > Math.abs(deltaX)) {
+            const callback = this.actionCallbacks.get('restart');
             if (callback) {
-                callback({ pressed: true, action: 'crouch' });
-            }
-        }
-
-        // If swiping up, trigger jump
-        else if (deltaY < -30) {
-            const callback = this.actionCallbacks.get('jump');
-            if (callback) {
-                callback({ pressed: true, action: 'jump' });
+                callback({ pressed: true, action: 'restart' });
             }
         }
     }
@@ -140,14 +141,28 @@ export class InputManager {
      */
     _handleTouchEnd(event) {
         event.preventDefault();
+        const screenWidth = window.innerWidth;
 
-        // Release any active actions
-        ['jump', 'crouch'].forEach((action) => {
-            const callback = this.actionCallbacks.get(action);
-            if (callback) {
-                callback({ pressed: false, action });
+        // If there are still touches, check which side they're on
+        const activeTouches = Array.from(event.touches);
+        const leftSideTouches = activeTouches.filter((touch) => touch.clientX < screenWidth / 2);
+        const rightSideTouches = activeTouches.filter((touch) => touch.clientX >= screenWidth / 2);
+
+        // Release jump if no touches on left side
+        if (leftSideTouches.length === 0) {
+            const jumpCallback = this.actionCallbacks.get('jump');
+            if (jumpCallback) {
+                jumpCallback({ pressed: false, action: 'jump' });
             }
-        });
+        }
+
+        // Release crouch if no touches on right side
+        if (rightSideTouches.length === 0) {
+            const crouchCallback = this.actionCallbacks.get('crouch');
+            if (crouchCallback) {
+                crouchCallback({ pressed: false, action: 'crouch' });
+            }
+        }
     }
 
     /**
