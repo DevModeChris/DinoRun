@@ -299,7 +299,6 @@ body {
     font-size: 16px;
     color: #f8f8f8;
     line-height: 1.6;
-    margin: 10px 0;
 }
 
 /* Game Over Screen */
@@ -346,6 +345,15 @@ body {
 #restart-btn:active {
     transform: translateY(0);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+/* Helper classes */
+.mt0 {
+    margin-top: 0;
+}
+
+.mb0 {
+    margin-bottom: 0;
 }
 
 /* Mobile-specific styles */
@@ -428,5 +436,18 @@ body {
 @media (hover: none) and (pointer: coarse) {
     #start-screen p {
         content: "👆 Tap to jump\n👆 Swipe up to jump\n👇 Swipe down to duck";
+    }
+}
+
+/* Device-specific display */
+@media (hover: hover) and (pointer: fine) {
+    .mobile-only {
+        display: none;
+    }
+}
+
+@media (hover: none) and (pointer: coarse) {
+    .desktop-only {
+        display: none;
     }
 }

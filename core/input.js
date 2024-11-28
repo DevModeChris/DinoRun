@@ -98,19 +98,39 @@ export class InputManager {
      * @private
      */
     _handleTouchStart(event) {
-        event.preventDefault();
-        const touch = event.touches[0];
+        // Only prevent default for game area touches
+        if (event.target.id === 'game-container') {
+            event.preventDefault();
+        }
+
         const screenWidth = window.innerWidth;
 
-        // Store touch start position
-        this.touchStartX = touch.clientX;
-        this.touchStartY = touch.clientY;
+        // If game hasn't started and we're not on game over screen,
+        // any touch should start the game
+        if (!window.game.gameStarted && !window.game.isGameOver) {
+            const callback = this.actionCallbacks.get('jump');
+            if (callback) {
+                callback({ pressed: true, action: 'jump' });
+            }
 
-        // Determine action based on which half of the screen was touched
-        const action = touch.clientX < screenWidth / 2 ? 'jump' : 'crouch';
-        const callback = this.actionCallbacks.get(action);
-        if (callback) {
-            callback({ pressed: true, action });
+            return;
+        }
+
+        // Handle all touches
+        Array.from(event.touches).forEach((touch) => {
+            // Determine action based on which half of the screen was touched
+            const action = touch.clientX < screenWidth / 2 ? 'jump' : 'crouch';
+            const callback = this.actionCallbacks.get(action);
+            if (callback) {
+                callback({ pressed: true, action });
+            }
+        });
+
+        // Store touch start position for swipe detection
+        if (event.touches.length > 0) {
+            const touch = event.touches[0];
+            this.touchStartX = touch.clientX;
+            this.touchStartY = touch.clientY;
         }
     }
 
@@ -119,18 +139,23 @@ export class InputManager {
      * @private
      */
     _handleTouchMove(event) {
-        event.preventDefault();
+        // Only prevent default for game area touches
+        if (event.target.id === 'game-container') {
+            event.preventDefault();
+        }
 
         // Touch move is only used for the restart gesture
-        const touch = event.touches[0];
-        const deltaY = touch.clientY - this.touchStartY;
-        const deltaX = touch.clientX - this.touchStartX;
+        if (event.touches.length > 0) {
+            const touch = event.touches[0];
+            const deltaY = touch.clientY - this.touchStartY;
+            const deltaX = touch.clientX - this.touchStartX;
 
-        // If significant vertical swipe while game is over, trigger restart
-        if (Math.abs(deltaY) > 50 && Math.abs(deltaY) > Math.abs(deltaX)) {
-            const callback = this.actionCallbacks.get('restart');
-            if (callback) {
-                callback({ pressed: true, action: 'restart' });
+            // If significant vertical swipe while game is over, trigger restart
+            if (Math.abs(deltaY) > 50 && Math.abs(deltaY) > Math.abs(deltaX)) {
+                const callback = this.actionCallbacks.get('restart');
+                if (callback) {
+                    callback({ pressed: true, action: 'restart' });
+                }
             }
         }
     }
@@ -140,7 +165,11 @@ export class InputManager {
      * @private
      */
     _handleTouchEnd(event) {
-        event.preventDefault();
+        // Only prevent default for game area touches
+        if (event.target.id === 'game-container') {
+            event.preventDefault();
+        }
+
         const screenWidth = window.innerWidth;
 
         // If there are still touches, check which side they're on
