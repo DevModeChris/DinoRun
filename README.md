@@ -4,7 +4,7 @@
 ![CSS3](https://img.shields.io/badge/css3-%231572B6.svg?style=for-the-badge&logo=css3&logoColor=white)
 ![JavaScript](https://img.shields.io/badge/javascript-%23323330.svg?style=for-the-badge&logo=javascript&logoColor=%23F7DF1E)
 ![ESModules](https://img.shields.io/badge/ES%20Modules-%23F7DF1E.svg?style=for-the-badge&logo=javascript&logoColor=black)
-![Python](https://img.shields.io/badge/python-3670A0?style=for-the-badge&logo=python&logoColor=ffdd54)
+![Node.js](https://img.shields.io/badge/node.js-6DA55F?style=for-the-badge&logo=node.js&logoColor=white)
 ![ESLint](https://img.shields.io/badge/ESLint-4B3263?style=for-the-badge&logo=eslint&logoColor=white)
 
 Welcome to Dino Run! This is a fun browser game where you help a brave little dinosaur run and jump over obstacles. But this isn't just any game - it's also a cool way to learn about coding!
@@ -33,22 +33,47 @@ The code is written with lots of helpful comments that explain what's happening 
 - 💫 Kid-friendly code comments to learn programming
 - 📊 High score tracking
 
-## 🎯 For Kids: How to Play the Game
+## 📋 Prerequisites
 
-Hey there, future programmer! 👋 Want to play the game? Here's how:
+Hey there, future programmer! Before you start, you'll need a few things installed on your computer:
 
-1. First, make sure you have Python installed on your computer to run the local server. We may switch to using Node.js in the future but it's a bit overkill for now.
-2. Download and extract or clone this repository
-3. Open your computer's terminal:
-   - On Windows: Press `Win + R`, type `cmd`, and press Enter
-4. Type these commands:
-   ```bash
-   cd path/to/DinoRun
-   python -m http.server 8000
-   ```
-5. Open your web browser
-6. Go to: `http://localhost:8000`
-7. Game time! Use these controls:
+1. 💻 **Node.js**: This helps run our game server
+   - Download it from [nodejs.org](https://nodejs.org/)
+   - Choose the "LTS" version (that means it's stable!)
+   - Follow the installation steps (just click "Next" a few times)
+
+2. 📝 **A Code Editor**: To look at and change the game's code
+   - I'd recommend [Visual Studio Code](https://code.visualstudio.com/)
+   - It's free and super easy to use!
+
+## 📥 Getting the Code
+
+Before you can play, you'll need to get a copy of the game on your computer:
+
+1. 🔱 Fork the repository:
+   - Go to [github.com/DevModeChris/DinoRun](https://github.com/DevModeChris/DinoRun)
+   - Click the "Fork" button in the top-right corner
+   - This creates your own copy of the game!
+
+2. 💾 Clone the code in VS Code:
+   - Open Visual Studio Code
+   - Press `Ctrl + Shift + P` to open the Command Palette
+   - Type "Git: Clone" and select it
+   - Paste your forked repository URL
+   - Choose where to save it on your computer
+   - Click "Open" when it asks to open the repository
+
+Now you have your own copy of the game that you can play with and modify! 🎮
+
+## 🎯 How to play the game
+
+Ready to play? Here's how to get started:
+
+1. 📦 First, open a terminal (Command Prompt) in the game folder, or in VS Code
+2. 🚀 Type `npm install` and press Enter (this gets everything ready)
+3. 🎮 Type `npm run start-server` and press Enter (this starts the game)
+4. 🌐 Open your web browser and go to `http://localhost:8000`
+5. 🦖 Start playing! Use these controls:
    - On Desktop:
      - Press `SPACE` or `UP ARROW` to jump (hold longer to jump higher!)
      - Press `CTRL` or `DOWN ARROW` to duck
@@ -60,9 +85,13 @@ Hey there, future programmer! 👋 Want to play the game? Here's how:
    - Collect power-ups to get special abilities
    - Try to get the highest score!
 
+When you're done playing:
+1. 🛑 Go back to the terminal
+2. ⌨️ Press `Ctrl + C` to stop the game server
+
 ## 📁 Project Structure
 
-Here's how our game files are organized:
+Here's how our game files are organised:
 
 ```
 DinoRun/
@@ -100,7 +129,7 @@ Want to learn how the game works? Start by looking at these files:
 6. Look at `entities/powerup.js` and `config/powerups.js` to learn about special abilities
 7. Finally, explore `entities/mob.js` and `config/mobs.js` to see how creatures work
 
-All the code has comments that explain what's happening! We use lots of emoji icons to make it fun and easy to understand.
+All the code has comments that explain what's happening!
 
 ## 🛠️ For Others
 

@@ -6,12 +6,12 @@
 /* Custom properties for easy theming and maintenance */
 :root {
     /* Colours */
-    --color-background: #fafafa;
-    --color-text: #202124;
-    --color-button: #4CAF50;
-    --color-button-hover: #45a049;
-    --color-ground: #c0a080;
-    --color-game-over: #e74c3c;
+    --colour-background: #fafafa;
+    --colour-text: #202124;
+    --colour-button: #4CAF50;
+    --colour-button-hover: #45a049;
+    --colour-ground: #c0a080;
+    --colour-game-over: #e74c3c;
     
     /* Spacing */
     --space-xs: 0.25rem;
@@ -41,8 +41,8 @@ body {
     height: 100vh;
     height: 100dvh;
     overflow: hidden;
-    background-color: var(--color-background);
-    color: var(--color-text);
+    background-color: var(--colour-background);
+    color: var(--colour-text);
     font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
@@ -58,9 +58,9 @@ body {
     height: var(--game-height);
     max-width: 100vw;
     max-height: 100vh;
-    background-color: var(--color-background);
+    background-color: var(--colour-background);
     overflow: hidden;
-    border: 2px solid var(--color-text);
+    border: 2px solid var(--colour-text);
 }
 
 #game-container {
@@ -69,7 +69,7 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: var(--color-background);
+    background-color: var(--colour-background);
 }
 
 /* Game elements */
@@ -79,7 +79,7 @@ body {
     left: 0;
     width: 100%;
     height: var(--ground-height);
-    background-color: var(--color-ground);
+    background-color: var(--colour-ground);
     z-index: 2;
 }
 
@@ -181,7 +181,7 @@ h4 {
 
 @media (min-width: 801px) and (min-device-width: 801px) and (-webkit-max-device-pixel-ratio: 1.9) and (max-resolution: 191dpi) {
     #game-wrapper {
-        border: 2px solid var(--color-text);
+        border: 2px solid var(--colour-text);
     }
 }
 
@@ -193,12 +193,6 @@ h4 {
 
     #ground {
         position: fixed;
-        bottom: 0;
-    }
-
-    #dino,
-    .obstacle {
-        bottom: 20px;
     }
 }
 
@@ -206,12 +200,6 @@ h4 {
 @media (max-width: 768px) and (orientation: landscape) {
     #ground {
         position: fixed;
-        bottom: 0;
-    }
-
-    #dino,
-    .obstacle {
-        bottom: 20px;
     }
 }
 
@@ -366,14 +354,14 @@ h4 {
 }
 
 h1 {
-    color: var(--color-button);
+    color: var(--colour-button);
     margin-bottom: var(--space-md);
     font-size: clamp(2rem, 4vw, 3rem);
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 h2 {
-    color: var(--color-game-over);
+    color: var(--colour-game-over);
     margin-bottom: var(--space-md);
     font-size: clamp(2rem, 4vw, 3rem);
     text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
@@ -385,7 +373,7 @@ h2 {
 }
 
 #restart-btn {
-    background-color: var(--color-button);
+    background-color: var(--colour-button);
     color: white;
     border: none;
     padding: var(--space-md) var(--space-xl);
@@ -396,7 +384,7 @@ h2 {
 }
 
 #restart-btn:hover {
-    background-color: var(--color-button-hover);
+    background-color: var(--colour-button-hover);
 }
 
 @keyframes pulse {
@@ -453,4 +441,10 @@ h2 {
 .mobile-only {
     margin-bottom: 0;
     text-align: left;
+}
+
+/* Fullscreen adjustments */
+:fullscreen #game-wrapper {
+    width: 100vw;
+    height: 100vh;
 }

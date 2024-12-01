@@ -26,14 +26,9 @@ export class InputManager {
         this._handleTouchMove = this._handleTouchMove.bind(this);
         this._handleTouchEnd = this._handleTouchEnd.bind(this);
 
-        // Set up keyboard listeners
-        document.addEventListener('keydown', this._handleKeyDown);
-        document.addEventListener('keyup', this._handleKeyUp);
-
-        // Set up touch listeners
-        document.addEventListener('touchstart', this._handleTouchStart, { passive: false });
-        document.addEventListener('touchmove', this._handleTouchMove, { passive: false });
-        document.addEventListener('touchend', this._handleTouchEnd, { passive: false });
+        // Setup input handlers
+        this.setupKeyboardControls();
+        this.setupTouchControls();
     }
 
     /**
@@ -192,6 +187,19 @@ export class InputManager {
                 crouchCallback({ pressed: false, action: 'crouch' });
             }
         }
+    }
+
+    setupKeyboardControls() {
+        // Set up keyboard listeners
+        document.addEventListener('keydown', this._handleKeyDown);
+        document.addEventListener('keyup', this._handleKeyUp);
+    }
+
+    setupTouchControls() {
+        // Set up touch listeners
+        document.addEventListener('touchstart', this._handleTouchStart, { passive: false });
+        document.addEventListener('touchmove', this._handleTouchMove, { passive: false });
+        document.addEventListener('touchend', this._handleTouchEnd, { passive: false });
     }
 
     /**
