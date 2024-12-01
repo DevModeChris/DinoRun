@@ -59,6 +59,13 @@ export class DinoGame {
         // Set up our particle system for visual effects
         this.particles = particleSystem;
 
+        // Performance settings
+        this.lastFrameTime = 0;
+        this.targetFPS = 60;
+        this.frameInterval = 1000 / this.targetFPS;
+        this.deltaTime = 0;
+        this.accumulator = 0;
+
         // Set up all our game's starting conditions
         this.gameStarted = false;        // Is the game running?
         this.isGameOver = false;         // Did we lose?
@@ -380,25 +387,28 @@ export class DinoGame {
     /**
      * 🔄 This is our game loop - it runs many times per second to update everything
      */
-    animate() {
-        // Update particle system even when game is over
-        this.particles.update();
+    animate(currentTime) {
+        // Convert to seconds for easier physics calculations
+        currentTime = currentTime / 1000;
 
-        if (this.isGameOver) {
-            requestAnimationFrame(this.animate.bind(this));
-
-            return;
+        if (this.lastFrameTime === 0) {
+            this.lastFrameTime = currentTime;
         }
 
-        if (this.gameStarted) {
-            // Update the dino's position
-            this.dino.updatePosition(
-                GAME_CONSTANTS.PHYSICS.GRAVITY,
-                GAME_CONSTANTS.PHYSICS.JUMP_BOOST_SPEED,
-                GAME_CONSTANTS.PHYSICS.MAX_BOOST_TIME,
-                this.isSlowMotionActive,
-                GAME_CONSTANTS.POWER_UPS.SLOW_MOTION.SPEED_MULTIPLIER,
-            );
+        // Calculate delta time and cap it to prevent spiral of death
+        this.deltaTime = Math.min(currentTime - this.lastFrameTime, 0.1);
+        this.lastFrameTime = currentTime;
+
+        this.accumulator += this.deltaTime;
+
+        // Update particle system every frame
+        this.particles.update();
+
+        // Update game state
+        while (this.accumulator >= 1 / this.targetFPS) {
+            if (this.isGameOver) {
+                break;
+            }
 
             // Calculate current speed multiplier
             let speedMultiplier = 1;
@@ -409,97 +419,105 @@ export class DinoGame {
                 speedMultiplier *= GAME_CONSTANTS.POWER_UPS.SPEED_BOOST.SPEED_MULTIPLIER;
             }
 
-            // Spawn and update obstacles
-            this.spawnObstacle();
+            // Update dino with delta time
+            this.dino.updatePosition(
+                GAME_CONSTANTS.PHYSICS.GRAVITY,
+                GAME_CONSTANTS.PHYSICS.JUMP_BOOST_SPEED,
+                GAME_CONSTANTS.PHYSICS.MAX_BOOST_TIME,
+                this.isSlowMotionActive,
+                speedMultiplier * this.deltaTime * this.targetFPS,
+            );
 
-            // Spawn and update mobs
-            this.spawnMob();
+            // Batch DOM updates
+            const updates = () => {
+                // Spawn and update entities
+                this.spawnObstacle();
+                this.spawnMob();
+                this.spawnPowerUp();
 
-            // Spawn and update power-ups
-            this.spawnPowerUp();
+                // Update entities with delta time
+                const timeStep = speedMultiplier * this.deltaTime * this.targetFPS;
 
-            // Update and filter mobs in a single pass
-            this.mobs = this.mobs.reduce((activeMobs, mob) => {
-                if (mob.update(speedMultiplier, this.gameSpeed)) {
-                    // Check for collisions with mobs
-                    if (isColliding(this.dino, mob)) {
-                        mob.onCollision();
-
-                        // Delay game over to let particles show
-                        setTimeout(() => this.gameOver(), 100);
-                        this.isGameOver = true; // Stop updates immediately
-                    }
-                    activeMobs.push(mob);
-                }
-                else {
-                    mob.remove();
-                }
-
-                return activeMobs;
-            }, []);
-
-            // Update and filter obstacles in a single pass
-            this.obstacles = this.obstacles.reduce((activeObstacles, obstacle) => {
-                if (obstacle.update(speedMultiplier, this.gameSpeed)) {
-                    // Check for collisions with obstacles
-                    if (isColliding(this.dino, obstacle, {
-                        isHole: obstacle.type === 'hole',
-                    })) {
-                        if (obstacle.type === 'hole' && !this.dino.isFalling) {
-                            // Handle falling into hole
-                            this.isGameOver = true;
-                            this.dino.fall().then(() => {
-                                this.gameOver();
-                            });
-                            this.audioManager.play('fall');
-                        }
-                        else {
-                            obstacle.onCollision();
+                // Update and filter mobs
+                this.mobs = this.mobs.reduce((activeMobs, mob) => {
+                    if (mob.update(timeStep, this.gameSpeed)) {
+                        if (isColliding(this.dino, mob)) {
+                            mob.onCollision();
 
                             // Delay game over to let particles show
                             setTimeout(() => this.gameOver(), 100);
                             this.isGameOver = true; // Stop updates immediately
                         }
+                        activeMobs.push(mob);
                     }
-                    activeObstacles.push(obstacle);
-                }
-                else {
-                    obstacle.remove();
-                }
+                    else {
+                        mob.remove();
+                    }
+                    return activeMobs;
+                }, []);
 
-                return activeObstacles;
-            }, []);
+                // Update and filter obstacles
+                this.obstacles = this.obstacles.reduce((activeObstacles, obstacle) => {
+                    if (obstacle.update(timeStep, this.gameSpeed)) {
+                        if (isColliding(this.dino, obstacle, {
+                            isHole: obstacle.type === 'hole',
+                        })) {
+                            if (obstacle.type === 'hole' && !this.dino.isFalling) {
+                                // Handle falling into hole
+                                this.isGameOver = true;
+                                this.dino.fall().then(() => {
+                                    this.gameOver();
+                                });
+                                this.audioManager.play('fall');
+                            }
+                            else {
+                                obstacle.onCollision();
 
-            // Update and filter power-ups in a single pass
-            this.powerUps = this.powerUps.reduce((activePowerUps, powerUp) => {
-                if (powerUp.update(speedMultiplier, this.gameSpeed)) {
-                    // Check for collisions with power-ups
-                    if (isColliding(this.dino, powerUp)) {
-                        this.collectPowerUp(powerUp);
+                                // Delay game over to let particles show
+                                setTimeout(() => this.gameOver(), 100);
+                                this.isGameOver = true; // Stop updates immediately
+                            }
+                        }
+                        activeObstacles.push(obstacle);
+                    }
+                    else {
+                        obstacle.remove();
+                    }
+                    return activeObstacles;
+                }, []);
+
+                // Update and filter power-ups
+                this.powerUps = this.powerUps.reduce((activePowerUps, powerUp) => {
+                    if (powerUp.update(timeStep, this.gameSpeed)) {
+                        if (isColliding(this.dino, powerUp)) {
+                            this.collectPowerUp(powerUp);
+                            powerUp.remove();
+
+                            return activePowerUps;
+                        }
+                        activePowerUps.push(powerUp);
+                    }
+                    else {
                         powerUp.remove();
-
-                        return activePowerUps;
                     }
-                    activePowerUps.push(powerUp);
+                    return activePowerUps;
+                }, []);
+
+                // Update game speed with delta time
+                if (this.gameSpeed < GAME_CONSTANTS.GAME_SPEED.MAX) {
+                    this.gameSpeed += GAME_CONSTANTS.GAME_SPEED.ACCELERATION * this.deltaTime;
                 }
-                else {
-                    powerUp.remove();
-                }
 
-                return activePowerUps;
-            }, []);
+                // Update score
+                this.updateScore();
+            };
 
-            // Update game speed
-            if (this.gameSpeed < GAME_CONSTANTS.GAME_SPEED.MAX) {
-                this.gameSpeed += GAME_CONSTANTS.GAME_SPEED.ACCELERATION;
-            }
-
-            // Update score
-            this.updateScore();
+            requestAnimationFrame(updates);
+            this.accumulator -= 1 / this.targetFPS;
         }
 
-        // Always request next frame first to keep animation smooth
-        this.animationFrameId = requestAnimationFrame(this.animate);
+        // Continue the game loop
+        this.animationFrameId = requestAnimationFrame(this.animate.bind(this));
     }
 
     updateScore() {

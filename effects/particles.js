@@ -57,10 +57,11 @@ class Particle {
             return false;
         }
 
-        // Update position
-        this.x += this.velocity.x;
-        this.y += this.velocity.y;
-        this.velocity.y += this.gravity;  // Gravity increases Y (moves down)
+        // Update position with delta time (assuming 60 FPS as base)
+        const deltaTime = 1 / 60;  // Fixed time step for consistent movement
+        this.x += this.velocity.x * deltaTime * 60;
+        this.y += this.velocity.y * deltaTime * 60;
+        this.velocity.y += this.gravity * deltaTime * 60;  // Gravity increases Y (moves down)
 
         // Update visual properties
         this.element.style.left = `${this.x}px`;
