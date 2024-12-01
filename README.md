@@ -107,6 +107,8 @@ DinoRun/
 │   ├── obstacle.js       # Things to jump over 🌵
 │   ├── powerup.js        # Special power-ups ⭐
 │   └── mob.js            # Moving creatures to avoid 🦅
+├── effects/
+│   └── particles.js      # Particle effects! 💨
 ├── config/
 │   ├── obstacles.js      # Obstacle types and settings
 │   ├── powerups.js       # Power-up types and settings
