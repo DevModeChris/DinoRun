@@ -15,6 +15,7 @@ import { GAME_CONSTANTS } from '../utils/constants.js';
 import { MOB_TYPES } from '../config/mobs.js';
 import { OBSTACLE_TYPES } from '../config/obstacles.js';
 import { POWER_UP_TYPES } from '../config/powerups.js';
+import { particleSystem } from '../effects/particles.js';
 
 /**
  * 🎯 DinoGame is the main class that controls everything in our game
@@ -54,6 +55,9 @@ export class DinoGame {
         // Set up our controls
         this.inputManager = new InputManager();
         this.bindEvents();
+
+        // Set up our particle system for visual effects
+        this.particles = particleSystem;
 
         // Set up all our game's starting conditions
         this.gameStarted = false;        // Is the game running?
@@ -109,6 +113,8 @@ export class DinoGame {
                     );
                     if (didJumpStart) {
                         this.audioManager.play('jump', this.isSlowMotionActive ? 0.5 : 1);
+                        const rect = this.dino.element.getBoundingClientRect();
+                        particleSystem.emitJump(rect.left + (rect.width / 2), rect.bottom);
                     }
                 }
                 this.dino.isSpacePressed = true;
@@ -156,36 +162,39 @@ export class DinoGame {
      * 💀 Handles what happens when the dino hits an obstacle
      */
     gameOver() {
-        // Set game over state
+        // Set game over state immediately to stop updates
         this.isGameOver = true;
         this.gameStarted = false;
-
-        // Get the current score and check if it's a new high score
-        const currentScore = this.scoreManager.getScore(false);
-        const isNewHighScore = this.scoreManager.isNewHighScore();
-
-        // Update the high score if needed
-        if (isNewHighScore) {
-            this.scoreManager.updateHighScore();
-        }
-
-        // Show game over screen
-        this.gameOverScreen.style.display = 'flex';
-        this.finalScoreElement.textContent = String(currentScore).padStart(5, '0');
-
-        // Show/hide high score message using classList
-        if (isNewHighScore) {
-            this.highScoreMessage.classList.add('visible');
-            this.audioManager.play('point'); // Play a celebratory sound
-        }
-        else {
-            this.highScoreMessage.classList.remove('visible');
-        }
 
         // Stop the dino and play game over sound
         this.dino.element.classList.remove('crouching', 'running');
         this.dino.element.classList.add('dead');
         this.audioManager.play('gameOver');
+
+        // Delay showing game over screen to let collision effects play
+        setTimeout(() => {
+            // Get the current score and check if it's a new high score
+            const currentScore = this.scoreManager.getScore(false);
+            const isNewHighScore = this.scoreManager.isNewHighScore();
+
+            // Update the high score if needed
+            if (isNewHighScore) {
+                this.scoreManager.updateHighScore();
+            }
+
+            // Show game over screen
+            this.gameOverScreen.style.display = 'flex';
+            this.finalScoreElement.textContent = String(currentScore).padStart(5, '0');
+
+            // Show/hide high score message using classList
+            if (isNewHighScore) {
+                this.highScoreMessage.classList.add('visible');
+                this.audioManager.play('point'); // Play a celebratory sound
+            }
+            else {
+                this.highScoreMessage.classList.remove('visible');
+            }
+        }, 600); // Delay of 600ms to show collision effects
     }
 
     /**
@@ -372,7 +381,16 @@ export class DinoGame {
      * 🔄 This is our game loop - it runs many times per second to update everything
      */
     animate() {
-        if (this.gameStarted && !this.isGameOver) {
+        // Update particle system even when game is over
+        this.particles.update();
+
+        if (this.isGameOver) {
+            requestAnimationFrame(this.animate.bind(this));
+
+            return;
+        }
+
+        if (this.gameStarted) {
             // Update the dino's position
             this.dino.updatePosition(
                 GAME_CONSTANTS.PHYSICS.GRAVITY,
@@ -405,7 +423,11 @@ export class DinoGame {
                 if (mob.update(speedMultiplier, this.gameSpeed)) {
                     // Check for collisions with mobs
                     if (isColliding(this.dino, mob)) {
-                        this.gameOver();
+                        mob.onCollision();
+
+                        // Delay game over to let particles show
+                        setTimeout(() => this.gameOver(), 100);
+                        this.isGameOver = true; // Stop updates immediately
                     }
                     activeMobs.push(mob);
                 }
@@ -426,11 +448,17 @@ export class DinoGame {
                         if (obstacle.type === 'hole' && !this.dino.isFalling) {
                             // Handle falling into hole
                             this.isGameOver = true;
-                            this.dino.fall().then(() => this.gameOver());
+                            this.dino.fall().then(() => {
+                                this.gameOver();
+                            });
                             this.audioManager.play('fall');
                         }
                         else {
-                            this.gameOver();
+                            obstacle.onCollision();
+
+                            // Delay game over to let particles show
+                            setTimeout(() => this.gameOver(), 100);
+                            this.isGameOver = true; // Stop updates immediately
                         }
                     }
                     activeObstacles.push(obstacle);
@@ -449,6 +477,7 @@ export class DinoGame {
                     if (isColliding(this.dino, powerUp)) {
                         this.collectPowerUp(powerUp);
                         powerUp.remove();
+
                         return activePowerUps;
                     }
                     activePowerUps.push(powerUp);
@@ -466,15 +495,19 @@ export class DinoGame {
             }
 
             // Update score
-            const currentTime = Date.now();
-            if (currentTime - this.lastScoreTime >= (this.isSlowMotionActive ? 200 : 100)) {
-                this.scoreManager.increment();
-                this.lastScoreTime = currentTime;
-            }
+            this.updateScore();
         }
 
         // Always request next frame first to keep animation smooth
         this.animationFrameId = requestAnimationFrame(this.animate);
+    }
+
+    updateScore() {
+        const now = Date.now();
+        if (now - this.lastScoreTime >= (this.isSlowMotionActive ? 200 : 100)) {
+            this.scoreManager.increment();
+            this.lastScoreTime = now;
+        }
     }
 }
 

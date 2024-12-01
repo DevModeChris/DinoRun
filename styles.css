@@ -120,14 +120,16 @@ h4 {
     justify-content: center;
     align-items: center;
     text-align: center;
-    background-color: rgba(0, 0, 0, 0.85);
+    background-color: rgba(0, 0, 0, 0.7);
     color: white;
     z-index: 100;
+    backdrop-filter: blur(5px);
+    -webkit-backdrop-filter: blur(5px);
 }
 
 .how-to-play {
     background-color: rgba(0, 0, 0, 0.5);
-    padding: var(--space-lg);
+    padding: var(--space-md);
     border-radius: 8px;
     width: min(90%, 500px);
     text-align: left;
@@ -470,4 +472,54 @@ h2 {
 :fullscreen #game-wrapper {
     width: 100vw;
     height: 100vh;
+}
+
+/* Particle effects */
+.particle {
+    position: absolute;
+    width: 8px;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.8);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 1000;
+}
+
+.particle.dust {
+    background-color: var(--colour-ground);
+    width: 6px;
+    height: 6px;
+}
+
+.particle.impact {
+    background-color: var(--colour-text);
+    width: 10px;
+    height: 10px;
+}
+
+/* Animation keyframes */
+@keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
+@keyframes bounce {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+/* Visual feedback animations */
+.dino.jump {
+    animation: bounce 0.3s ease-out;
+}
+
+.obstacle.hit, 
+.mob.hit {
+    animation: shake 0.3s ease-in-out;
+}
+
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
 }

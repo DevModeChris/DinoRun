@@ -91,12 +91,33 @@ export class Obstacle {
      */
     getHitbox() {
         const rect = this.element.getBoundingClientRect();
+        const containerRect = window.game.gameContainer.getBoundingClientRect();
+
         return {
-            x: rect.left,
-            y: rect.top,
+            x: rect.left - containerRect.left,
+            y: rect.top - containerRect.top,
             width: rect.width,
             height: rect.height,
         };
+    }
+
+    /**
+     * Handle collision effects
+     */
+    onCollision() {
+        // Add hit animation class
+        this.element.classList.add('hit');
+
+        // Emit collision particles
+        if (window.game && window.game.particles) {
+            const hitbox = this.getHitbox();
+            window.game.particles.emitCollision(hitbox.x + (hitbox.width / 2), hitbox.y + (hitbox.height / 2));
+        }
+
+        // Remove hit class after animation
+        setTimeout(() => {
+            this.element.classList.remove('hit');
+        }, 200);
     }
 
     /**

@@ -49,17 +49,7 @@ export class Mob {
         gameContainer.appendChild(this.element);
 
         // Apply position and dimension styles
-        Object.assign(this.element.style, {
-            position: 'absolute',
-            width: `${this.width}px`,
-            height: `${this.height}px`,
-            left: `${this.x}px`,
-            bottom: `${this.y}px`,
-            backgroundColor: config.backgroundColor || '#4a90e2',
-            zIndex: '2',
-            borderRadius: '4px',
-            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
-        });
+        this.updatePosition();
 
         // Apply animations if defined
         if (config.animations?.fly) {
@@ -70,6 +60,20 @@ export class Mob {
                 easing: 'ease-in-out',
             });
         }
+    }
+
+    updatePosition() {
+        Object.assign(this.element.style, {
+            position: 'absolute',
+            width: `${this.width}px`,
+            height: `${this.height}px`,
+            left: `${this.x}px`,
+            bottom: `${this.y}px`,
+            backgroundColor: this.config.backgroundColor || '#4a90e2',
+            zIndex: '2',
+            borderRadius: '4px',
+            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)',
+        });
     }
 
     /**
@@ -83,10 +87,26 @@ export class Mob {
         // Move at the mob's own speed, scaled by game speed and multiplier
         const effectiveSpeed = this.speed * (gameSpeed / GAME_CONSTANTS.GAME_SPEED.INITIAL);
         this.x -= effectiveSpeed * speedMultiplier;
-        this.element.style.left = `${this.x}px`;
+        this.updatePosition();
 
         // Return true if the mob is still on screen
         return this.x + this.width > 0;
+    }
+
+    onCollision() {
+        // Add hit animation class
+        this.element.classList.add('hit');
+
+        // Emit collision particles
+        if (window.game && window.game.particles) {
+            const hitbox = this.getHitbox();
+            window.game.particles.emitCollision(hitbox.x + (hitbox.width / 2), hitbox.y + (hitbox.height / 2));
+        }
+
+        // Remove hit class after animation
+        setTimeout(() => {
+            this.element.classList.remove('hit');
+        }, 200);
     }
 
     /**
@@ -95,9 +115,11 @@ export class Mob {
      */
     getHitbox() {
         const rect = this.element.getBoundingClientRect();
+        const containerRect = window.game.gameContainer.getBoundingClientRect();
+
         return {
-            x: rect.left,
-            y: rect.top,
+            x: rect.left - containerRect.left,
+            y: rect.top - containerRect.top,
             width: rect.width,
             height: rect.height,
         };

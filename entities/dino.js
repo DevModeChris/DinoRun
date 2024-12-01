@@ -44,9 +44,11 @@ export class Dino {
      */
     getHitbox() {
         const rect = this.element.getBoundingClientRect();
+        const containerRect = window.game.gameContainer.getBoundingClientRect();
+
         const hitbox = {
-            x: rect.left,
-            y: rect.top,
+            x: rect.left - containerRect.left,
+            y: rect.top - containerRect.top,
             width: rect.width,
             height: rect.height,
         };
@@ -55,7 +57,7 @@ export class Dino {
         if (this.isCrouching) {
             hitbox.height = rect.height * 0.7;  // Make hitbox shorter when crouching
             hitbox.width = rect.width * 1.2;    // Make hitbox wider when crouching
-            hitbox.y = rect.bottom - hitbox.height; // Align hitbox with bottom of dino
+            hitbox.y = (rect.bottom - containerRect.top) - hitbox.height; // Align hitbox with bottom of dino
         }
 
         return hitbox;
@@ -78,6 +80,12 @@ export class Dino {
         this.isSpacePressed = true;
         this.boostStartTime = Date.now();
         this.lastUpdateTime = Date.now();
+
+        // Create dust effect at the jump position
+        if (window.game && window.game.particles) {
+            const hitbox = this.getHitbox();
+            window.game.particles.emitJump(hitbox.x + (hitbox.width / 2), hitbox.y + hitbox.height);
+        }
 
         // 💨 Push off the ground
         this.verticalVelocity = jumpStrength;
@@ -166,6 +174,12 @@ export class Dino {
         this.verticalVelocity = 0;
         this.isJumping = false;
         this.isSpacePressed = false;
+
+        // Create dust particles when landing
+        if (window.game && window.game.particles) {
+            const hitbox = this.getHitbox();
+            window.game.particles.emitLand(hitbox.x + (hitbox.width / 2), hitbox.y + hitbox.height);
+        }
 
         // Start running animation if game is going
         if (window.game && window.game.gameStarted && !window.game.isGameOver) {
