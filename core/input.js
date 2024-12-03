@@ -101,21 +101,22 @@ export class InputManager {
 
         const screenWidth = window.innerWidth;
 
-        // Handle all touches
-        Array.from(event.touches).forEach((touch) => {
-            // Determine action based on which half of the screen was touched
-            const action = touch.clientX < screenWidth / 2 ? 'jump' : 'crouch';
-            const callback = this.actionCallbacks.get(action);
-            if (callback) {
-                callback({ pressed: true, action });
-            }
-        });
-
         // Store touch start position for swipe detection
         if (event.touches.length > 0) {
             const touch = event.touches[0];
-            this.touchStartX = touch.clientX;
             this.touchStartY = touch.clientY;
+        }
+
+        // Handle all touches
+        if (window.game && window.game.currentState === 'PLAYING' && !window.game.isGameOver) {
+            Array.from(event.touches).forEach((touch) => {
+                // Determine action based on which half of the screen was touched
+                const action = touch.clientX < screenWidth / 2 ? 'jump' : 'crouch';
+                const callback = this.actionCallbacks.get(action);
+                if (callback) {
+                    callback({ pressed: true, action });
+                }
+            });
         }
     }
 
@@ -128,12 +129,21 @@ export class InputManager {
             const touch = event.touches[0];
             const deltaY = this.touchStartY - touch.clientY;
 
-            // If swiped up, trigger jump
-            if (deltaY > 50 && window.game && window.game.currentState === 'PLAYING' && !window.game.isGameOver) {
-                const callback = this.actionCallbacks.get('jump');
+            if (window.game && window.game.currentState === 'PLAYING' && !window.game.isGameOver) {
+                // Handle swipe up
+                if (deltaY > 50) {
+                    const jumpCallback = this.actionCallbacks.get('jump');
+                    if (jumpCallback) {
+                        jumpCallback({ pressed: true, action: 'jump' });
+                    }
+                }
 
-                if (callback) {
-                    callback({ pressed: true, action: 'jump' });
+                // Handle swipe down
+                else if (deltaY < -50) {
+                    const crouchCallback = this.actionCallbacks.get('crouch');
+                    if (crouchCallback) {
+                        crouchCallback({ pressed: true, action: 'crouch' });
+                    }
                 }
             }
         }

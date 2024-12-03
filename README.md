@@ -23,13 +23,14 @@ The code is written with lots of helpful comments that explain what's happening 
 
 ### ✨ Features
 
+- 🎮 Menu system
 - 🦖 Control a cute dinosaur character
 - 🌵 Jump over obstacles like cacti, rocks, and holes
 - 🦅 Duck under flying birds
 - ⭐ Collect power-ups with special abilities:
   - ⏳ Slow Motion: Makes everything move slower
   - ⚡ Speed Boost: Makes everything move faster
-- 🎵 Sound effects and background music
+- 🎵 Sound effects
 - 💫 Kid-friendly code comments to learn programming
 - 📊 High score tracking
 
@@ -73,17 +74,20 @@ Ready to play? Here's how to get started:
 2. 🚀 Type `npm install` and press Enter (this gets everything ready)
 3. 🎮 Type `npm run start-server` and press Enter (this starts the game)
 4. 🌐 Open your web browser and go to `http://localhost:8000`
-5. 🦖 Start playing! Use these controls:
-   - On Desktop:
-     - Press `SPACE` or `UP ARROW` to jump (hold longer to jump higher!)
-     - Press `CTRL` or `DOWN ARROW` to duck
-     - Press `ENTER` or click 'Try Again' to restart when game over
-   - On Mobile:
-     - Touch and hold left side of screen to jump
-     - Touch and hold right side of screen to crouch
-     - Tap 'Try Again' button or swipe vertically when game over to restart
-   - Collect power-ups to get special abilities
-   - Try to get the highest score!
+5. 🎮 Click 'Play' to start the game!
+
+Game Controls:
+- On Desktop:
+  - Press `SPACE` or `UP ARROW` to jump (hold longer to jump higher!)
+  - Press `CTRL` or `DOWN ARROW` to duck
+- On Mobile:
+  - Swipe up or tap left side of screen to jump
+  - Swipe down or tap right side of screen to crouch
+
+Tips:
+- 📖 Check the How to Play screen for detailed instructions
+- ⭐ Collect power-ups to get special abilities
+- 🏆 Try to beat your high score!
 
 When you're done playing:
 1. 🛑 Go back to the terminal
