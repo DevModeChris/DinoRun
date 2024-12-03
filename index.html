@@ -47,30 +47,55 @@
             <div id="high-score">High Score: <span id="high-score-value">0</span></div>
 
             <!-- 
-                Welcome Screen 📖
-                This is like the title page of a storybook.
-                It tells you how to start your adventure!
+                Main Menu Screen 🎮
+                This is where our adventure begins!
+                Choose what you want to do from here.
             -->
-            <div id="start-screen">
+            <div id="main-menu-screen">
                 <h1>Dino Run</h1>
-                <p class="desktop-only">Press SPACE to start</p>
-                <p class="mobile-only">Tap anywhere to start</p>
-                <h4>How to Play:</h4>
+                <div class="menu-buttons">
+                    <button type="button" id="start-game-btn">Start Game</button>
+                    <button type="button" id="how-to-play-btn">How to Play</button>
+                    <button type="button" id="settings-btn">Settings</button>
+                </div>
+            </div>
+
+            <!-- 
+                How to Play Screen 📖
+                Learn all about controlling your dino!
+            -->
+            <div id="how-to-play-screen" style="display: none">
+                <h2>How to Play</h2>
                 <div class="how-to-play">
                     <p class="desktop-only">
                         🦖 Press SPACE / UP ARROW to JUMP (hold it to jump higher!)<br>
-                        🦖 Press DOWN ARROW or CTRL to DUCK<br>
-                        🦖 Press ENTER to restart when game over
+                        🦖 Press DOWN ARROW or CTRL to DUCK
                     </p>
                     <p class="mobile-only">
                         🦖 Tap LEFT side to JUMP (hold to jump higher!)<br>
-                        🦖 Tap RIGHT side to DUCK<br>
-                        🦖 Swipe UP or tap TRY AGAIN to restart
+                        🦖 Tap RIGHT side to DUCK
                     </p>
                     <p>
-                        🦖 Collect ⭐ power-ups to give you an advantage!
+                        🦖 Collect ⭐ power-ups to increase your chances
                     </p>
                 </div>
+                <button type="button" class="back-btn">Back to Menu</button>
+            </div>
+
+            <!-- 
+                Settings Screen ⚙️
+                Customise your game experience!
+            -->
+            <div id="settings-screen" style="display: none">
+                <h2>Settings</h2>
+                <div class="settings-content">
+                    <div class="setting-item">
+                        <label for="volume-slider">Game Volume</label>
+                        <input type="range" id="volume-slider" min="0" max="100" value="30">
+                        <span id="volume-value">30%</span>
+                    </div>
+                </div>
+                <button type="button" class="back-btn">Back to Menu</button>
             </div>
 
             <!-- 
@@ -85,7 +110,10 @@
                     <span class="score-label">Your Score:</span>
                     <span class="final-score">0</span>
                 </div>
-                <button type="button" id="restart-btn">Play Again!</button>
+                <div class="game-over-buttons">
+                    <button type="button" id="restart-btn">Play Again!</button>
+                    <button type="button" id="menu-btn">Main Menu</button>
+                </div>
             </div>
         </div>
 

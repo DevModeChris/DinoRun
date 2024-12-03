@@ -95,6 +95,22 @@ body {
     z-index: 1;
 }
 
+#dino.crouching {
+    height: calc(var(--dino-size) * 0.5);
+}
+
+#dino.running {
+    animation: run 0.4s infinite;
+}
+
+#dino.dead {
+    background-color: var(--colour-game-over);
+}
+
+#dino.falling {
+    animation: fall 0.6s ease-in forwards;
+}
+
 .obstacle {
     position: absolute;
     bottom: var(--ground-height);
@@ -253,28 +269,6 @@ h4 {
 }
 
 /* Dino states and animations */
-#dino.running {
-    animation: run 0.5s infinite;
-}
-
-#dino.crouching {
-    height: 30px;
-    transition: height 0.1s ease-out;
-}
-
-#dino.crouching::before {
-    top: 2px;
-}
-
-#dino.crouching::after {
-    top: 5px;
-}
-
-#dino.falling {
-    animation: fall 0.8s ease-in forwards;
-    z-index: 1;
-}
-
 @keyframes run {
     0% { bottom: var(--ground-height); }
     50% { bottom: calc(var(--ground-height) + 20px); }
@@ -284,11 +278,9 @@ h4 {
 @keyframes fall {
     0% {
         transform: translateY(0) rotate(0deg);
-        opacity: 1;
     }
     100% {
-        transform: translateY(100px) rotate(90deg);
-        opacity: 0;
+        transform: translateY(200px) rotate(90deg);
     }
 }
 
@@ -356,7 +348,9 @@ h4 {
 }
 
 /* Start screen and Game over screen shared styles */
-#start-screen,
+#main-menu-screen,
+#how-to-play-screen,
+#settings-screen,
 #game-over-screen {
     position: absolute;
     inset: 0;
@@ -371,11 +365,75 @@ h4 {
     background-color: rgba(0, 0, 0, 0.85);
     color: white;
     z-index: 100;
+    gap: var(--space-md);
 }
 
-#start-screen p,
-#game-over-screen p {
-    color: rgba(255, 255, 255, 0.9);
+/* Menu buttons styling */
+.menu-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    margin-top: var(--space-lg);
+}
+
+button {
+    background-color: var(--colour-button);
+    color: white;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    transition: transform 0.2s, background-color 0.2s;
+    min-width: 200px;
+}
+
+button:hover {
+    background-color: var(--colour-button-hover);
+    transform: scale(1.05);
+}
+
+.back-btn {
+    margin-top: var(--space-lg);
+}
+
+/* Settings screen styles */
+.settings-content {
+    background-color: rgba(255, 255, 255, 0.1);
+    padding: var(--space-lg);
+    border-radius: 8px;
+    width: min(90%, 400px);
+}
+
+.setting-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    margin-bottom: var(--space-md);
+}
+
+.setting-item label {
+    min-width: 120px;
+    text-align: right;
+}
+
+input[type="range"] {
+    flex: 1;
+    height: 8px;
+    border-radius: 4px;
+    background-color: rgba(255, 255, 255, 0.2);
+    outline: none;
+}
+
+#volume-value {
+    min-width: 60px;
+    text-align: left;
+}
+
+/* Game over screen buttons */
+.game-over-buttons {
+    display: flex;
+    gap: var(--space-md);
 }
 
 h1 {
@@ -459,13 +517,6 @@ h2 {
 @keyframes float {
     from { transform: translateY(0); }
     to { transform: translateY(-10px); }
-}
-
-/* Start screen text styling */
-#start-screen p:first-of-type,
-.mobile-only {
-    margin-bottom: 0;
-    text-align: left;
 }
 
 /* Fullscreen adjustments */

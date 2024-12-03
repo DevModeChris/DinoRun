@@ -16,7 +16,7 @@ export const GAME_CONSTANTS = {
     // 🏃 Game Speed Settings - How fast everything moves
     GAME_SPEED: {
         INITIAL: 5,          // How fast we start (like level 1)
-        MAX: 12,            // Top speed (like max level)
+        MAX: 12,             // Top speed (like max level)
         ACCELERATION: 0.005, // How quickly we speed up (like leveling up)
     },
 
@@ -61,8 +61,9 @@ export const GAME_CONSTANTS = {
         SPAWN_CHANCE: 0.3,    // 30% chance to spawn when allowed
     },
 
-    // 🎵 Sound Settings - All the fun noises in our game!
+    // 🔊 Sound Settings - All the fun noises in our game!
+    // Percentage based values, so 0.3 = 30%, 0.5 = 50%, 1.0 = 100% etc
     AUDIO: {
-        VOLUME: 0.3,                // How loud the sounds are (0 = quiet, 1 = loud)
+        VOLUME: 0.3,  // How loud the sounds are (0.1 = quiet, 1.0 = loud)
     },
 };

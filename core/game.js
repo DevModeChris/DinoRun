@@ -35,15 +35,29 @@ export class DinoGame {
         // First, let's get all the things we can see on the screen
         this.dino = new Dino(document.getElementById('dino'));
         this.gameContainer = document.getElementById('game-container');
-        this.startScreen = document.getElementById('start-screen');
+
+        // Get all our game screens
+        this.mainMenuScreen = document.getElementById('main-menu-screen');
+        this.howToPlayScreen = document.getElementById('how-to-play-screen');
+        this.settingsScreen = document.getElementById('settings-screen');
         this.gameOverScreen = document.getElementById('game-over-screen');
+
+        // Get all our menu buttons
+        this.startGameBtn = document.getElementById('start-game-btn');
+        this.howToPlayBtn = document.getElementById('how-to-play-btn');
+        this.settingsBtn = document.getElementById('settings-btn');
+        this.backBtns = document.querySelectorAll('.back-btn');
+        this.menuBtn = document.getElementById('menu-btn');
+        this.restartBtn = document.getElementById('restart-btn');
+
+        // Get our settings controls
+        this.volumeSlider = document.getElementById('volume-slider');
+        this.volumeValue = document.getElementById('volume-value');
 
         // Get the places where we'll show the score
         this.finalScoreContainer = document.getElementById('final-score-container');
         this.finalScoreElement = this.finalScoreContainer.querySelector('.final-score');
         this.highScoreMessage = document.querySelector('.high-score-message');
-
-        this.restartBtn = document.getElementById('restart-btn');
 
         // Create our sound player and score keeper
         this.audioManager = new AudioManager();
@@ -67,12 +81,12 @@ export class DinoGame {
         this.accumulator = 0;
 
         // Set up all our game's starting conditions
-        this.gameStarted = false;        // Is the game running?
-        this.isGameOver = false;         // Did we lose?
+        this.currentState = 'MENU';  // Start at main menu
+        this.isGameOver = false;     // Did we lose?
         this.gameSpeed = GAME_CONSTANTS.GAME_SPEED.INITIAL;  // How fast everything moves
 
         // Lists to keep track of everything in our game
-        this.obstacles = [];             // Things to jump over
+        this.obstacles = [];            // Things to jump over
         this.powerUps = [];             // Special powers to collect
         this.mobs = [];                 // Moving creatures to avoid
 
@@ -90,6 +104,10 @@ export class DinoGame {
         // Make sure our dino starts in the correct state
         this.dino.element.classList.remove('crouching', 'running', 'dead');
 
+        // Initialize volume
+        this.volumeSlider.value = GAME_CONSTANTS.AUDIO.VOLUME * 100;
+        this.volumeValue.textContent = `${Math.round(GAME_CONSTANTS.AUDIO.VOLUME * 100)}%`;
+
         // Start our game loop - this keeps everything moving
         this.animate = this.animate.bind(this);
         this.animationFrameId = requestAnimationFrame(this.animate);
@@ -103,26 +121,17 @@ export class DinoGame {
      * players press certain keys or click buttons
      */
     bindEvents() {
-        // Set up input handling
+        // Handle jumping
         this.inputManager.onAction('jump', ({ pressed }) => {
-            if (pressed) {
-                // Start game if not started
-                if (!this.gameStarted && !this.isGameOver) {
-                    this.startGame();
-                    return;
-                }
-
-                // Handle jumping
-                if (!this.isGameOver) {
-                    // Only play jump sound if we actually start a new jump
-                    const didJumpStart = this.dino.jump(
-                        GAME_CONSTANTS.PHYSICS.INITIAL_JUMP_SPEED,
-                    );
-                    if (didJumpStart) {
-                        this.audioManager.play('jump', this.isSlowMotionActive ? 0.5 : 1);
-                        const rect = this.dino.element.getBoundingClientRect();
-                        particleSystem.emitJump(rect.left + (rect.width / 2), rect.bottom);
-                    }
+            if (pressed && this.currentState === 'PLAYING' && !this.isGameOver) {
+                // Only play jump sound if we actually start a new jump
+                const didJumpStart = this.dino.jump(
+                    GAME_CONSTANTS.PHYSICS.INITIAL_JUMP_SPEED,
+                );
+                if (didJumpStart) {
+                    this.audioManager.play('jump', this.isSlowMotionActive ? 0.5 : 1);
+                    const rect = this.dino.element.getBoundingClientRect();
+                    particleSystem.emitJump(rect.left + (rect.width / 2), rect.bottom);
                 }
                 this.dino.isSpacePressed = true;
             }
@@ -131,83 +140,86 @@ export class DinoGame {
             }
         });
 
+        // Handle crouching
         this.inputManager.onAction('crouch', ({ pressed }) => {
-            if (!this.isGameOver && this.gameStarted) {
+            if (this.currentState === 'PLAYING' && !this.isGameOver) {
                 this.dino.crouch(pressed);
             }
         });
 
-        this.inputManager.onAction('restart', ({ pressed }) => {
-            if (pressed && this.isGameOver) {
-                this.restartGame();
-            }
+        // Menu navigation
+        this.startGameBtn.addEventListener('click', () => this.startGame());
+        this.howToPlayBtn.addEventListener('click', () => this.showScreen('HOW_TO_PLAY'));
+        this.settingsBtn.addEventListener('click', () => this.showScreen('SETTINGS'));
+        this.backBtns.forEach((btn) => btn.addEventListener('click', () => this.showScreen('MENU')));
+        this.menuBtn.addEventListener('click', () => {
+            this.showScreen('MENU');
+            this.resetGame();
         });
-
-        // Button click handling
         this.restartBtn.addEventListener('click', () => this.restartGame());
+
+        // Volume control
+        this.volumeSlider.addEventListener('input', (event) => {
+            const volume = event.target.value / 100;
+            this.volumeValue.textContent = `${event.target.value}%`;
+            this.audioManager.setVolume(volume);
+        });
     }
 
     /**
-     * 🏃‍♂️‍➡️ Begins the game when the player first presses the spacebar
+     * 🔄 Shows a specific game screen and hides others
+     * @param {string} screenState - Which screen to show
      */
-    startGame() {
-        if (this.isGameOver) {
-            return;
+    showScreen(screenState) {
+        // Hide all screens first
+        this.mainMenuScreen.style.display = 'none';
+        this.howToPlayScreen.style.display = 'none';
+        this.settingsScreen.style.display = 'none';
+        this.gameOverScreen.style.display = 'none';
+
+        // Show the requested screen
+        switch (screenState) {
+            case 'MENU':
+                this.mainMenuScreen.style.display = 'flex';
+                break;
+            case 'HOW_TO_PLAY':
+                this.howToPlayScreen.style.display = 'flex';
+                break;
+            case 'SETTINGS':
+                this.settingsScreen.style.display = 'flex';
+                break;
+            case 'GAME_OVER':
+                this.gameOverScreen.style.display = 'flex';
+                break;
+            case 'PLAYING':
+                this.gameContainer.style.display = 'block';
+                break;
         }
 
-        // Hide the start screen
-        this.startScreen.style.display = 'none';
-
-        // Start the game
-        this.gameStarted = true;
-        this.lastScoreTime = Date.now();
-        this.lastPowerUpSpawnTime = Date.now();
-        this.dino.element.classList.add('running');
+        this.currentState = screenState;
     }
 
     /**
-     * 💀 Handles what happens when the dino hits an obstacle
+     * 🏃‍♂️‍➡️ Begins the game when the player clicks start
      */
-    gameOver() {
-        // Set game over state immediately to stop updates
-        this.isGameOver = true;
-        this.gameStarted = false;
+    startGame() {
+        // Hide all menu screens
+        this.showScreen('PLAYING');
 
-        // Stop the dino and play game over sound
-        this.dino.element.classList.remove('crouching', 'running');
-        this.dino.element.classList.add('dead');
-        this.audioManager.play('gameOver');
+        // Reset timers
+        this.lastScoreTime = Date.now();
+        this.lastPowerUpSpawnTime = Date.now();
+        this.lastObstacleSpawnTime = Date.now();
+        this.lastMobSpawnTime = Date.now();
 
-        // Delay showing game over screen to let collision effects play
-        setTimeout(() => {
-            // Get the current score and check if it's a new high score
-            const currentScore = this.scoreManager.getScore(false);
-            const isNewHighScore = this.scoreManager.isNewHighScore();
-
-            // Update the high score if needed
-            if (isNewHighScore) {
-                this.scoreManager.updateHighScore();
-            }
-
-            // Show game over screen
-            this.gameOverScreen.style.display = 'flex';
-            this.finalScoreElement.textContent = String(currentScore).padStart(5, '0');
-
-            // Show/hide high score message using classList
-            if (isNewHighScore) {
-                this.highScoreMessage.classList.add('visible');
-                this.audioManager.play('point'); // Play a celebratory sound
-            }
-            else {
-                this.highScoreMessage.classList.remove('visible');
-            }
-        }, 600); // Delay of 600ms to show collision effects
+        // Start running animation
+        this.dino.element.classList.add('running');
     }
 
     /**
      * 🔁 Resets everything to start a new game
      */
-    restartGame() {
+    resetGame() {
         // Reset game state
         this.isGameOver = false;
         this.gameSpeed = GAME_CONSTANTS.GAME_SPEED.INITIAL;
@@ -233,21 +245,61 @@ export class DinoGame {
         // Reset the score
         this.scoreManager.reset();
         this.highScoreMessage.classList.remove('visible');
+    }
 
-        // Hide the game over screen and show the start screen
-        this.gameOverScreen.style.display = 'none';
-        this.startScreen.style.display = 'flex';
+    /**
+     * 🔄 Restarts the game immediately
+     */
+    restartGame() {
+        this.resetGame();
+        this.startGame();
+    }
 
-        // Reset game started flag
-        this.gameStarted = false;
+    /**
+     * 💀 Handles what happens when the dino hits an obstacle
+     */
+    gameOver() {
+        // Set game over state immediately to stop updates
+        this.currentState = 'GAME_OVER';
+        this.isGameOver = true;
+
+        // Stop the dino and play game over sound
+        this.dino.element.classList.remove('crouching', 'running');
+        this.dino.element.classList.add('dead');
+        this.audioManager.play('gameOver');
+
+        // Delay showing game over screen to let collision effects play
+        setTimeout(() => {
+            // Get the current score and check if it's a new high score
+            const currentScore = this.scoreManager.getScore(false);
+            const isNewHighScore = this.scoreManager.isNewHighScore();
+
+            // Update the high score if needed
+            if (isNewHighScore) {
+                this.scoreManager.updateHighScore();
+            }
+
+            // Show game over screen
+            this.showScreen('GAME_OVER');
+            this.finalScoreElement.textContent = String(currentScore).padStart(5, '0');
+
+            // Show/hide high score message using classList
+            if (isNewHighScore) {
+                this.highScoreMessage.classList.add('visible');
+                this.audioManager.play('point'); // Play a celebratory sound
+            }
+            else {
+                this.highScoreMessage.classList.remove('visible');
+            }
+        }, 600); // Delay of 600ms to show collision effects
     }
 
     /**
      * 🪨 Creates new obstacles for the dino to jump over
      */
     spawnObstacle() {
-        // Don't spawn if game hasn't started
-        if (!this.gameStarted || this.isGameOver) {
+        // Don't spawn if game isn't in playing state
+        if (this.currentState !== 'PLAYING' || this.isGameOver) {
             return;
         }
 
@@ -269,8 +321,8 @@ export class DinoGame {
      * 🐣 Creates new mobs that move with their own behaviour
      */
     spawnMob() {
-        // Don't spawn if game hasn't started
-        if (!this.gameStarted || this.isGameOver) {
+        // Don't spawn if game isn't in playing state
+        if (this.currentState !== 'PLAYING' || this.isGameOver) {
             return;
         }
 
@@ -297,8 +349,8 @@ export class DinoGame {
      * 🎁 Creates new power-ups for the dino to collect
      */
     spawnPowerUp() {
-        // Don't spawn if game hasn't started
-        if (!this.gameStarted || this.isGameOver) {
+        // Don't spawn if game isn't in playing state
+        if (this.currentState !== 'PLAYING' || this.isGameOver) {
             return;
         }
 
@@ -404,12 +456,8 @@ export class DinoGame {
         // Update particle system every frame
         this.particles.update();
 
-        // Update game state
-        while (this.accumulator >= 1 / this.targetFPS) {
-            if (this.isGameOver) {
-                break;
-            }
-
+        // Only update game state if we're playing
+        if (this.currentState === 'PLAYING' && !this.isGameOver) {
             // Calculate current speed multiplier
             let speedMultiplier = 1;
             if (this.isSlowMotionActive) {
@@ -428,96 +476,122 @@ export class DinoGame {
                 speedMultiplier * this.deltaTime * this.targetFPS,
             );
 
-            // Batch DOM updates
-            const updates = () => {
-                // Spawn and update entities
-                this.spawnObstacle();
-                this.spawnMob();
-                this.spawnPowerUp();
+            // Update game state
+            while (this.accumulator >= 1 / this.targetFPS) {
+                this.updates();
+                this.updateScore();
 
-                // Update entities with delta time
-                const timeStep = speedMultiplier * this.deltaTime * this.targetFPS;
-
-                // Update and filter mobs
-                this.mobs = this.mobs.reduce((activeMobs, mob) => {
-                    if (mob.update(timeStep, this.gameSpeed)) {
-                        if (isColliding(this.dino, mob)) {
-                            mob.onCollision();
-
-                            // Delay game over to let particles show
-                            setTimeout(() => this.gameOver(), 100);
-                            this.isGameOver = true; // Stop updates immediately
-                        }
-                        activeMobs.push(mob);
-                    }
-                    else {
-                        mob.remove();
-                    }
-                    return activeMobs;
-                }, []);
-
-                // Update and filter obstacles
-                this.obstacles = this.obstacles.reduce((activeObstacles, obstacle) => {
-                    if (obstacle.update(timeStep, this.gameSpeed)) {
-                        if (isColliding(this.dino, obstacle, {
-                            isHole: obstacle.type === 'hole',
-                        })) {
-                            if (obstacle.type === 'hole' && !this.dino.isFalling) {
-                                // Handle falling into hole
-                                this.isGameOver = true;
-                                this.dino.fall().then(() => {
-                                    this.gameOver();
-                                });
-                                this.audioManager.play('fall');
-                            }
-                            else {
-                                obstacle.onCollision();
-
-                                // Delay game over to let particles show
-                                setTimeout(() => this.gameOver(), 100);
-                                this.isGameOver = true; // Stop updates immediately
-                            }
-                        }
-                        activeObstacles.push(obstacle);
-                    }
-                    else {
-                        obstacle.remove();
-                    }
-                    return activeObstacles;
-                }, []);
-
-                // Update and filter power-ups
-                this.powerUps = this.powerUps.reduce((activePowerUps, powerUp) => {
-                    if (powerUp.update(timeStep, this.gameSpeed)) {
-                        if (isColliding(this.dino, powerUp)) {
-                            this.collectPowerUp(powerUp);
-                            powerUp.remove();
-
-                            return activePowerUps;
-                        }
-                        activePowerUps.push(powerUp);
-                    }
-                    else {
-                        powerUp.remove();
-                    }
-                    return activePowerUps;
-                }, []);
-
-                // Update game speed with delta time
+                // Update game speed
                 if (this.gameSpeed < GAME_CONSTANTS.GAME_SPEED.MAX) {
-                    this.gameSpeed += GAME_CONSTANTS.GAME_SPEED.ACCELERATION * this.deltaTime;
+                    this.gameSpeed += GAME_CONSTANTS.GAME_SPEED.ACCELERATION * (1 / this.targetFPS);
                 }
 
-                // Update score
-                this.updateScore();
-            };
-
-            requestAnimationFrame(updates);
-            this.accumulator -= 1 / this.targetFPS;
+                this.accumulator -= 1 / this.targetFPS;
+            }
         }
 
-        // Continue the game loop
+        // Request next frame
         this.animationFrameId = requestAnimationFrame(this.animate.bind(this));
+    }
+
+    /**
+     * Batch DOM updates
+     */
+    updates() {
+        // Spawn and update entities
+        this.spawnObstacle();
+        this.spawnMob();
+        this.spawnPowerUp();
+
+        // Calculate current speed multiplier
+        let speedMultiplier = 1;
+        if (this.isSlowMotionActive) {
+            speedMultiplier *= GAME_CONSTANTS.POWER_UPS.SLOW_MOTION.SPEED_MULTIPLIER;
+        }
+        if (this.isSpeedBoostActive) {
+            speedMultiplier *= GAME_CONSTANTS.POWER_UPS.SPEED_BOOST.SPEED_MULTIPLIER;
+        }
+
+        const timeStep = speedMultiplier * this.deltaTime * this.targetFPS;
+
+        // Update and filter entities
+        this.updateEntities(timeStep);
+    }
+
+    /**
+     * Update all game entities
+     * @param {number} timeStep
+     */
+    updateEntities(timeStep) {
+        // Update and filter mobs
+        this.mobs = this.mobs.reduce((activeMobs, mob) => {
+            if (mob.update(timeStep, this.gameSpeed)) {
+                if (isColliding(this.dino, mob)) {
+                    mob.onCollision();
+
+                    // Delay game over to let particles show
+                    setTimeout(() => this.gameOver(), 100);
+                    this.isGameOver = true; // Stop updates immediately
+                }
+
+                activeMobs.push(mob);
+            }
+            else {
+                mob.remove();
+            }
+
+            return activeMobs;
+        }, []);
+
+        // Update and filter obstacles
+        this.obstacles = this.obstacles.reduce((activeObstacles, obstacle) => {
+            if (obstacle.update(timeStep, this.gameSpeed)) {
+                if (isColliding(this.dino, obstacle, { isHole: obstacle.type === 'hole' })) {
+                    obstacle.onCollision();
+
+                    if (obstacle.type === 'hole') {
+                        // Play fall sound and animation
+                        this.audioManager.play('fall');
+                        this.dino.element.classList.add('falling');
+
+                        // Longer delay for fall animation
+                        setTimeout(() => this.gameOver(), 600);
+                    }
+                    else {
+                        // Regular collision handling
+                        setTimeout(() => this.gameOver(), 100);
+                    }
+
+                    this.isGameOver = true; // Stop updates immediately
+                }
+
+                activeObstacles.push(obstacle);
+            }
+            else {
+                obstacle.remove();
+            }
+
+            return activeObstacles;
+        }, []);
+
+        // Update and filter power-ups
+        this.powerUps = this.powerUps.reduce((activePowerUps, powerUp) => {
+            if (powerUp.update(timeStep, this.gameSpeed)) {
+                if (isColliding(this.dino, powerUp)) {
+                    this.collectPowerUp(powerUp);
+                    powerUp.remove();
+
+                    return activePowerUps;
+                }
+
+                activePowerUps.push(powerUp);
+            }
+            else {
+                powerUp.remove();
+            }
+
+            return activePowerUps;
+        }, []);
     }
 
     updateScore() {

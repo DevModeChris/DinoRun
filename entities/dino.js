@@ -115,7 +115,8 @@ export class Dino {
         else {
             this.element.classList.remove('crouching');
 
-            if (!this.isJumping && window.game && window.game.gameStarted && !window.game.isGameOver) {
+            // Only add running class if we're in a valid playing state
+            if (!this.isJumping && window.game && window.game.currentState === 'PLAYING' && !window.game.isGameOver) {
                 this.element.classList.add('running');
             }
         }
@@ -182,7 +183,7 @@ export class Dino {
         }
 
         // Start running animation if game is going
-        if (window.game && window.game.gameStarted && !window.game.isGameOver) {
+        if (!this.isCrouching && window.game && window.game.currentState === 'PLAYING' && !window.game.isGameOver) {
             this.element.classList.add('running');
         }
     }

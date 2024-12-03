@@ -35,17 +35,15 @@ export class AudioManager {
             fall: 0,
         };
 
-        // Set up each sound with the right volume and settings
-        Object.values(this.sounds).forEach((sound) => {
-            sound.volume = GAME_CONSTANTS.AUDIO.VOLUME;
-            sound.preservesPitch = false; // Allow pitch to change with speed
-        });
+        // Set initial volume for all sounds
+        this.volume = GAME_CONSTANTS.AUDIO.VOLUME;
+        this.setVolume(this.volume);
     }
 
     /**
-     * Plays a specific sound effect
-     * @param {string} soundName - Which sound to play ('jump', 'gameOver', or 'point')
-     * @param {number} playbackRate - How fast to play the sound (1 = normal, 0.5 = half speed)
+     * 🔊 Play a sound effect
+     * @param {string} soundName - Which sound to play
+     * @param {number} [playbackRate=1] - How fast to play the sound (1 = normal, 0.5 = half speed)
      */
     play(soundName, playbackRate = 1) {
         const sound = this.sounds[soundName];
@@ -66,11 +64,23 @@ export class AudioManager {
 
         // Create a fresh copy of the sound to play
         const clone = sound.cloneNode();
-        clone.volume = GAME_CONSTANTS.AUDIO.VOLUME;
+        clone.volume = this.volume;
         clone.playbackRate = playbackRate; // Set the speed
         clone.preservesPitch = false; // Let the pitch change with speed
 
         // Play the sound! If it fails, log the error
         clone.play().catch((e) => console.log('Error playing sound:', e));
+    }
+
+    /**
+     * 🎚️ Set the volume for all game sounds
+     * @param {number} volume - Volume level from 0 to 1
+     */
+    setVolume(volume) {
+        this.volume = volume;
+        Object.values(this.sounds).forEach((sound) => {
+            sound.volume = volume;
+            sound.preservesPitch = false; // Allow pitch to change with speed
+        });
     }
 }

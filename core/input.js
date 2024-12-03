@@ -8,7 +8,6 @@ export class InputManager {
         this.keyBindings = {
             jump: ['Space', 'ArrowUp'],
             crouch: ['ArrowDown', 'ControlLeft', 'ControlRight'],
-            restart: ['Enter'],
         };
 
         // Track key and touch states
@@ -47,18 +46,20 @@ export class InputManager {
      */
     isActionPressed(action) {
         const keys = this.keyBindings[action] || [];
+
         return keys.some((key) => this.keyStates.get(key));
     }
 
     /**
-     * Handle keydown events
+     * Handle key down events
      * @private
      */
     _handleKeyDown(event) {
+        // Update key state
         this.keyStates.set(event.code, true);
 
-        // Find which action this key triggers
-        for (const [action, keys] of Object.entries(this.keyBindings)) {
+        // Find and trigger action callbacks
+        Object.entries(this.keyBindings).forEach(([action, keys]) => {
             if (keys.includes(event.code)) {
                 event.preventDefault();
                 const callback = this.actionCallbacks.get(action);
@@ -66,26 +67,26 @@ export class InputManager {
                     callback({ pressed: true, action });
                 }
             }
-        }
+        });
     }
 
     /**
-     * Handle keyup events
+     * Handle key up events
      * @private
      */
     _handleKeyUp(event) {
+        // Update key state
         this.keyStates.set(event.code, false);
 
-        // Find which action this key triggers
-        for (const [action, keys] of Object.entries(this.keyBindings)) {
+        // Find and trigger action callbacks
+        Object.entries(this.keyBindings).forEach(([action, keys]) => {
             if (keys.includes(event.code)) {
-                event.preventDefault();
                 const callback = this.actionCallbacks.get(action);
                 if (callback) {
                     callback({ pressed: false, action });
                 }
             }
-        }
+        });
     }
 
     /**
@@ -99,17 +100,6 @@ export class InputManager {
         }
 
         const screenWidth = window.innerWidth;
-
-        // If game hasn't started and we're not on game over screen,
-        // any touch should start the game
-        if (!window.game.gameStarted && !window.game.isGameOver) {
-            const callback = this.actionCallbacks.get('jump');
-            if (callback) {
-                callback({ pressed: true, action: 'jump' });
-            }
-
-            return;
-        }
 
         // Handle all touches
         Array.from(event.touches).forEach((touch) => {
@@ -134,22 +124,16 @@ export class InputManager {
      * @private
      */
     _handleTouchMove(event) {
-        // Only prevent default for game area touches
-        if (event.target.id === 'game-container') {
-            event.preventDefault();
-        }
-
-        // Touch move is only used for the restart gesture
         if (event.touches.length > 0) {
             const touch = event.touches[0];
-            const deltaY = touch.clientY - this.touchStartY;
-            const deltaX = touch.clientX - this.touchStartX;
+            const deltaY = this.touchStartY - touch.clientY;
 
-            // If significant vertical swipe while game is over, trigger restart
-            if (Math.abs(deltaY) > 50 && Math.abs(deltaY) > Math.abs(deltaX)) {
-                const callback = this.actionCallbacks.get('restart');
+            // If swiped up, trigger jump
+            if (deltaY > 50 && window.game && window.game.currentState === 'PLAYING' && !window.game.isGameOver) {
+                const callback = this.actionCallbacks.get('jump');
+
                 if (callback) {
-                    callback({ pressed: true, action: 'restart' });
+                    callback({ pressed: true, action: 'jump' });
                 }
             }
         }
@@ -160,11 +144,6 @@ export class InputManager {
      * @private
      */
     _handleTouchEnd(event) {
-        // Only prevent default for game area touches
-        if (event.target.id === 'game-container') {
-            event.preventDefault();
-        }
-
         const screenWidth = window.innerWidth;
 
         // If there are still touches, check which side they're on
