@@ -1,3 +1,9 @@
+# ⚠️ Branch Note:
+- This is the simple DOM based rendering version of the game, before it was rewrote using HTML5 Canvas.
+- This version will likely not be updated going forward.
+- See `main` branch for the latest version.
+---
+
 # 🦖 Dino Run Game
 
 ![HTML5](https://img.shields.io/badge/html5-%23E34F26.svg?style=for-the-badge&logo=html5&logoColor=white)
