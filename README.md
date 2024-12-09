@@ -1,7 +1,7 @@
-# ⚠️ Branch Note:
-- This is the simple DOM based rendering version of the game, before it was rewrote using HTML5 Canvas.
-- This version will likely not be updated going forward.
-- See `main` branch for the latest version.
+> ### ⚠️ Branch Note
+> This is the simple DOM based rendering version of the game, before it was rewrote using HTML5 Canvas.
+> This version will likely not be updated going forward.
+> See `main` branch for the latest version.
 ---
 
 # 🦖 Dino Run Game
