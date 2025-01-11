@@ -130,7 +130,7 @@ DinoRun/
 Want to learn how the game works? Start by looking at these files:
 
 1. First, check out `index.html` - it's like the game's skeleton
-2. Then look at `src/game/config.js` - it's the brain of our game!
+2. Then look at `src/main.js` - it's the brain of our game!
 3. Look at `src/game/objects/` - it handles all the game objects
 4. Check out `src/game/scenes/` - it controls our game scenes
 5. Try reading `src/game/ui/` to see how the UI works
