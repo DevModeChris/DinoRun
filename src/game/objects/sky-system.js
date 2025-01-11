@@ -218,24 +218,16 @@ export class SkySystem {
         this.#createLighting();
 
         // Create our star system
-        if (SkySystem.STAR_CONFIG.ENABLED) {
-            this.#createStars();
-        }
+        this.#createStars();
 
         // Create our aurora system
-        if (SkySystem.AURORA_CONFIG.ENABLED) {
-            this.#createAurora();
-        }
+        this.#createAurora();
 
         // Create our cloud system
-        if (SkySystem.CLOUD_CONFIG.ENABLED) {
-            this.#createClouds();
-        }
+        this.#createClouds();
 
         // Create our weather effects system
-        if (SkySystem.WEATHER_CONFIG.ENABLED) {
-            this.#createWeatherEffects();
-        }
+        this.#createWeatherEffects();
     }
 
     /**
@@ -275,6 +267,10 @@ export class SkySystem {
      * Creates the star system
      */
     #createStars() {
+        if (!SkySystem.STAR_CONFIG.ENABLED) {
+            return;
+        }
+
         // Create a container for all stars
         this.#starContainer = this.#scene.add.container(0, 0)
             .setDepth(100)  // Between sky and lighting
@@ -328,6 +324,10 @@ export class SkySystem {
      * Creates the aurora effect system
      */
     #createAurora() {
+        if (!SkySystem.AURORA_CONFIG.ENABLED) {
+            return;
+        }
+
         // Create graphics object for aurora
         this.#auroraGraphics = this.#scene.add.graphics()
             .setDepth(150)  // Above stars but below lighting
@@ -370,6 +370,10 @@ export class SkySystem {
      * Creates the cloud system
      */
     #createClouds() {
+        if (!SkySystem.CLOUD_CONFIG.ENABLED) {
+            return;
+        }
+
         // Create graphics object for clouds
         this.#cloudGraphics = this.#scene.add.graphics()
             .setDepth(120)  // Below stars but above aurora
@@ -576,6 +580,10 @@ export class SkySystem {
      * @param {number} time - Current game time in milliseconds
      */
     #updateAurora(time) {
+        if (!SkySystem.AURORA_CONFIG.ENABLED) {
+            return;
+        }
+
         const timeOfDay = this.getTimeOfDay();
 
         // Only allow aurora during night time
@@ -776,6 +784,10 @@ export class SkySystem {
      * @param {number} _time - Current game time
      */
     #updateClouds(_time) {
+        if (!SkySystem.CLOUD_CONFIG.ENABLED) {
+            return;
+        }
+
         // Initialise clouds if needed
         if (this.#clouds.length === 0) {
             const numClouds = Phaser.Math.Between(
@@ -903,6 +915,10 @@ export class SkySystem {
      * Creates our weather particle systems
      */
     #createWeatherEffects() {
+        if (!SkySystem.WEATHER_CONFIG.ENABLED) {
+            return;
+        }
+
         // Create rain emitter
         this.#rainEmitter = this.#scene.add.particles(0, 0, 'particle', {
             x: { min: 0, max: this.#scene.scale.width },
@@ -968,6 +984,10 @@ export class SkySystem {
      * @param {number} delta - Time in ms since last update
      */
     #updateWeather(delta) {
+        if (!SkySystem.WEATHER_CONFIG.ENABLED) {
+            return;
+        }
+
         // Update weather timer
         if (this.#weatherTimer > 0) {
             this.#weatherTimer -= delta;
@@ -1008,21 +1028,9 @@ export class SkySystem {
 
         this.#updateSkyGradient();
         this.#updateLighting();
-
-        if (SkySystem.STAR_CONFIG.ENABLED) {
-            this.#updateStars(time);
-        }
-
-        if (SkySystem.AURORA_CONFIG.ENABLED) {
-            this.#updateAurora(time);
-        }
-
-        if (SkySystem.CLOUD_CONFIG.ENABLED) {
-            this.#updateClouds(time);
-        }
-
-        if (SkySystem.WEATHER_CONFIG.ENABLED) {
-            this.#updateWeather(delta);
-        }
+        this.#updateStars(time);
+        this.#updateAurora(time);
+        this.#updateClouds(time);
+        this.#updateWeather(delta);
     }
 }
