@@ -34,8 +34,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 'latest'
-          cache: 'npm'
-          cache-dependency-path: '**/packages.lock.json'
       - name: Install dependencies
         run: npm ci
       - name: Build
