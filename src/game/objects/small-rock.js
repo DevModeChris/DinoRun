@@ -30,9 +30,16 @@ export class SmallRock extends Obstacle {
         // to the middle-bottom of the sprite
         this.setOrigin(0.5, 0.8);
 
-        // Add to scene and enable physics directly
+        // Add to scene and enable physics
         scene.add.existing(this);
-        scene.physics.add.existing(this, true);  // true makes it static
+        scene.physics.add.existing(this);  // Make it dynamic so it can move
+
+        // Configure physics body - no gravity, just horizontal movement
+        if (this.body) {
+            this.body.setAllowGravity(false);
+
+            // Initial velocity is set in the base class update method
+        }
 
         // Make sure we have a physics body before trying to adjust it
         if (!this.body) {

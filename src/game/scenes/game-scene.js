@@ -358,7 +358,7 @@ export class GameScene extends Phaser.Scene {
 
         return new SmallRock(
             this,
-            this.scale.width + 100,
+            this.scale.width + 100, // Start off-screen to the right
             this.scale.height - this.#groundCollisionHeight,
             this.#difficultyManager.getCurrentSpeed(), // Use current difficulty speed
         );
@@ -468,6 +468,15 @@ export class GameScene extends Phaser.Scene {
                 this.#difficultyManager.getSpawnInterval(7000),
             );
         }
+    }
+
+    /**
+     * Gets the current ground scroll speed
+     *
+     * @returns {number} The current ground scroll speed
+     */
+    getGroundSpeed() {
+        return this.#ground.getScrollSpeed();
     }
 
     /**

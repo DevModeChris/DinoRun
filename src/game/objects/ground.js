@@ -72,4 +72,13 @@ export class Ground extends Phaser.GameObjects.TileSprite {
     setScrollSpeed(speed) {
         this.#scrollSpeed = speed;
     }
+
+    /**
+     * Gets the current scroll speed
+     *
+     * @returns {number} The current scroll speed
+     */
+    getScrollSpeed() {
+        return this.#scrollSpeed;
+    }
 }

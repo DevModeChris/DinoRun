@@ -9,21 +9,6 @@ export class Obstacle extends Phaser.GameObjects.Sprite {
     /** @type {number} */
     #scrollSpeed;
 
-    /** @type {number} */
-    #previousX;
-
-    /** @type {number} */
-    #bodyWidth;
-
-    /** @type {number} */
-    #bodyHeight;
-
-    /** @type {number} */
-    #bodyOffsetX;
-
-    /** @type {number} */
-    #bodyOffsetY;
-
     /**
      * Creates a new obstacle for our dino to dodge
      *
@@ -38,11 +23,6 @@ export class Obstacle extends Phaser.GameObjects.Sprite {
         super(scene, x, y, textureKey, frameKey);
 
         this.#scrollSpeed = scrollSpeed;
-        this.#previousX = x;
-        this.#bodyWidth = 0;
-        this.#bodyHeight = 0;
-        this.#bodyOffsetX = 0;
-        this.#bodyOffsetY = 0;
 
         // Add to the scene
         scene.add.existing(this);
@@ -67,11 +47,6 @@ export class Obstacle extends Phaser.GameObjects.Sprite {
      * @param {number} offsetY - Y offset for the collision box
      */
     setCollisionBox(width, height, offsetX = 0, offsetY = 0) {
-        this.#bodyWidth = width;
-        this.#bodyHeight = height;
-        this.#bodyOffsetX = offsetX;
-        this.#bodyOffsetY = offsetY;
-
         if (this.body) {
             this.body.setSize(width, height);
 
@@ -92,30 +67,20 @@ export class Obstacle extends Phaser.GameObjects.Sprite {
      * @param {number} delta - Time since last update in milliseconds
      */
     update(delta) {
-        // Calculate new position
-        const deltaSeconds = delta / 1000;
-        const newX = this.x - (this.#scrollSpeed * deltaSeconds);
+        // Get the current ground speed from the game scene
+        const currentSpeed = this.scene.getGroundSpeed();
 
-        // Update position and store previous position
-        this.x = newX;
-        this.#previousX = newX;
+        // Update our speed to match the ground
+        this.#scrollSpeed = currentSpeed;
 
-        // If the obstacle has moved completely off screen to the left, destroy it
-        if (this.x < -this.width) {
-            this.destroy();
+        // Move left with the ground using physics
+        if (this.body) {
+            this.body.setVelocityX(-this.#scrollSpeed);
         }
 
-        // Update physics body position and size
-        if (this.body) {
-            // Center the body within the sprite first
-            const centerX = this.x - (this.#bodyWidth / 2);
-            const centerY = this.y - (this.#bodyHeight / 2);
-
-            // Then apply the offsets
-            this.body.position.x = centerX + this.#bodyOffsetX;
-            this.body.position.y = centerY + this.#bodyOffsetY;
-
-            this.body.setSize(this.#bodyWidth, this.#bodyHeight);
+        // Clean up when off screen
+        if (this.x < -this.width) {
+            this.destroy();
         }
     }
 }
