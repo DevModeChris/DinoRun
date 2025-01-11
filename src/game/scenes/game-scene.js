@@ -109,36 +109,36 @@ export class GameScene extends Phaser.Scene {
         // Load font
         this.load.font(
             'annie-use-your-telescope',
-            '/src/assets/fonts/AnnieUseYourTelescope-Regular.ttf',
+            'src/assets/fonts/AnnieUseYourTelescope-Regular.ttf',
             'truetype',
         );
 
         // Load the ground spritesheet and its data
         this.load.atlas(
             'ground-sprites',
-            '/src/assets/sprites/ground.png',
-            '/src/assets/sprites/ground.json',
+            'src/assets/sprites/ground.png',
+            'src/assets/sprites/ground.json',
         );
 
         // Load the dino spritesheet and its data
         this.load.atlas(
             'dino-sprites',
-            '/src/assets/sprites/dino.png',
-            '/src/assets/sprites/dino.json',
+            'src/assets/sprites/dino.png',
+            'src/assets/sprites/dino.json',
         );
 
         // Load bird sprites
         this.load.spritesheet(
             'bird-sprites',
-            '/src/assets/sprites/bird.png',
+            'src/assets/sprites/bird.png',
             { frameWidth: 32, frameHeight: 32 },
         );
 
         // Load the small rock obstacles spritesheet and its data
         this.load.atlas(
             'obstacle-small-rocks-sprites',
-            '/src/assets/sprites/sml-rocks.png',
-            '/src/assets/sprites/sml-rocks.json',
+            'src/assets/sprites/sml-rocks.png',
+            'src/assets/sprites/sml-rocks.json',
         );
     }
 
