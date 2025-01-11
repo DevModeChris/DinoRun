@@ -1,0 +1,19 @@
+{
+	"frames": {
+		"purpleGrass": {
+			"frame":{ "x": 0, "y": 0, "w": 825, "h": 81 },
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": { "x": 0, "y": 0, "w": 825, "h": 81 },
+			"sourceSize": { "w": 825, "h": 81 }
+		}
+	},
+	"meta":{
+		"app": "DinoRun Asset Packer",
+		"version": "1.0",
+		"image": "ground.png",
+		"format": "RGBA8888",
+		"size":{ "w": 825, "h": 81 },
+		"scale": "1"
+	}
+}

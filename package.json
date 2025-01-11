@@ -2,16 +2,21 @@
     "name": "dino-run",
     "version": "1.0.0",
     "description": "Dino Run Game",
-    "repository": "https://github.com/devmodechris/DinoRun.git",
+    "repository": "https://github.com/DevModeChris/DinoRun.git",
+    "type": "module",
     "scripts": {
-        "start-server": "http-server . -p 8000 -c-1 --silent",
+        "start-server": "vite --config vite/config.dev.js",
+        "build": "vite build --config vite/config.prod.js",
+        "preview": "vite preview --config vite/config.dev.js",
         "lint": "eslint .",
-        "lint:fix": "eslint . --fix",
-        "format": "eslint . --fix"
+        "lint:fix": "eslint . --fix"
+    },
+    "dependencies": {
+        "phaser": "^3.87.0"
     },
     "devDependencies": {
         "eslint": "^8.56.0",
         "eslint-plugin-jsdoc": "^50.5.0",
-        "http-server": "^14.1.1"
+        "vite": "^5.4.11"
     }
 }

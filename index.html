@@ -1,136 +1,19 @@
-<!doctype html>
-<!-- 
-    Welcome to Dino Run! 🦖
-    This is like a blueprint for our game - it tells the browser how to build everything.
-    Just like building with LEGO, we need different pieces to make our game work!
--->
+<!DOCTYPE html>
 <html lang="en">
-    <head>
-        <!-- These are like instructions for the browser to read our game correctly -->
-        <meta charset="UTF-8" />
-        <meta name="viewport" content="width=device-width, height=device-height, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
-        <meta name="mobile-web-app-capable" content="yes">
-        <meta name="apple-mobile-web-app-capable" content="yes">
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-        <meta name="theme-color" content="#fafafa">
-        <meta name="format-detection" content="telephone=no">
-        <title>Dino Run Game</title>
-
-        <!-- This is like the art book that tells our game how to look pretty! -->
-        <link rel="stylesheet" href="styles.css" />
-    </head>
-    <body>
-        <!-- 
-            The Game World! 🌟
-            Think of this as our dino's playground - everything happens in here.
-            It's like a big box where our dino can run and jump!
-        -->
-        <div id="game-wrapper">
-            <!-- 
-                The Running Track 🏃
-                This is where our dino runs and jumps over obstacles.
-                Just like a real running track, but with dinosaurs!
-            -->
-            <div id="game-container">
-                <!-- Our brave dino hero! -->
-                <div id="dino"></div>
-                <!-- The ground that our dino runs on -->
-                <div id="ground"></div>
-            </div>
-
-            <!-- 
-                Scoreboard 🏆
-                Just like in sports, we keep track of how well you're doing!
-                The higher the score, the better you're playing.
-            -->
-            <div id="score">Score: <span id="score-value">0</span></div>
-            <div id="high-score">High Score: <span id="high-score-value">0</span></div>
-
-            <!-- 
-                Main Menu Screen 🎮
-                This is where our adventure begins!
-                Choose what you want to do from here.
-            -->
-            <div id="main-menu-screen">
-                <h1>Dino Run</h1>
-                <div class="menu-buttons">
-                    <button type="button" id="start-game-btn">Start Game</button>
-                    <button type="button" id="how-to-play-btn">How to Play</button>
-                    <button type="button" id="settings-btn">Settings</button>
-                </div>
-            </div>
-
-            <!-- 
-                How to Play Screen 📖
-                Learn all about controlling your dino!
-            -->
-            <div id="how-to-play-screen" style="display: none">
-                <h2>How to Play</h2>
-                <div class="how-to-play">
-                    <p class="desktop-only">
-                        🦖 Press SPACE / UP ARROW to JUMP (hold it to jump higher!)<br>
-                        🦖 Press DOWN ARROW or CTRL to DUCK
-                    </p>
-                    <p class="mobile-only">
-                        🦖 Tap LEFT side to JUMP (hold to jump higher!)<br>
-                        🦖 Tap RIGHT side to DUCK
-                    </p>
-                    <p>
-                        🦖 Collect ⭐ power-ups to increase your chances
-                    </p>
-                </div>
-                <button type="button" class="back-btn">Back to Menu</button>
-            </div>
-
-            <!-- 
-                Settings Screen ⚙️
-                Customise your game experience!
-            -->
-            <div id="settings-screen" style="display: none">
-                <h2>Settings</h2>
-                <div class="settings-content">
-                    <div class="setting-item">
-                        <label for="volume-slider">Game Volume</label>
-                        <input type="range" id="volume-slider" min="0" max="100" value="30">
-                        <span id="volume-value">30%</span>
-                    </div>
-                </div>
-                <button type="button" class="back-btn">Back to Menu</button>
-            </div>
-
-            <!-- 
-                Game Over Screen 🎮
-                Don't worry if you hit something - everyone does!
-                This screen lets you see how well you did and try again.
-            -->
-            <div id="game-over-screen" style="display: none">
-                <h2>Game Over!</h2>
-                <div id="final-score-container">
-                    <div class="high-score-message">NEW HIGH SCORE!</div>
-                    <span class="score-label">Your Score:</span>
-                    <span class="final-score">0</span>
-                </div>
-                <div class="game-over-buttons">
-                    <button type="button" id="restart-btn">Play Again!</button>
-                    <button type="button" id="menu-btn">Main Menu</button>
-                </div>
-            </div>
-        </div>
-
-        <!-- 
-            Sound Effects 🔊
-            These are like the sound effects in cartoons!
-            They make the game more fun and exciting.
-        -->
-        <audio id="jump-sound" src="sounds/jump.wav" preload="auto"></audio>
-        <audio id="game-over-sound" src="sounds/gameover.wav" preload="auto"></audio>
-        <audio id="point-sound" src="sounds/point.wav" preload="auto"></audio>
-
-        <!-- 
-            The Game's Brain 🧠
-            This connects to our JavaScript file that makes everything work.
-            It's like the control center that tells our dino what to do!
-        -->
-        <script src="core/game.js" type="module"></script>
-    </body>
+<head>
+    <!-- These are like instructions for the browser to read our game correctly -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#fafafa">
+    <meta name="format-detection" content="telephone=no">
+    <title>Dino Run</title>
+    <link rel="stylesheet" href="/src/styles.css">
+</head>
+<body>
+    <div id="game"></div>
+    <script type="module" src="/src/main.js"></script>
+</body>
 </html>

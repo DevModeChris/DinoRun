@@ -1,10 +1,12 @@
 # 🦖 Dino Run Game
 
 ![HTML5](https://img.shields.io/badge/html5-%23E34F26.svg?style=for-the-badge&logo=html5&logoColor=white)
-![CSS3](https://img.shields.io/badge/css3-%231572B6.svg?style=for-the-badge&logo=css3&logoColor=white)
 ![JavaScript](https://img.shields.io/badge/javascript-%23323330.svg?style=for-the-badge&logo=javascript&logoColor=%23F7DF1E)
 ![ESModules](https://img.shields.io/badge/ES%20Modules-%23F7DF1E.svg?style=for-the-badge&logo=javascript&logoColor=black)
 ![Node.js](https://img.shields.io/badge/node.js-6DA55F?style=for-the-badge&logo=node.js&logoColor=white)
+![Phaser](https://img.shields.io/badge/Phaser-263d6c?style=for-the-badge&logo=data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAABmJLR0QAAAAAAAD5Q7t/AAAACXBIWXMAAABIAAAASABGyWs+AAAACXZwQWcAAAAQAAAAEABcxq3DAAABJ0lEQVQ4y6WTP0sDQRDF30hSXoqxuS9gLwoWAQmYwsIIQtCrDdho4LrEgJXNql3Aa43YGVuvSOE16dPlO6Q6OzsZi1z2suxeAubBNLv7fsyfHRIRbCzFLIr5X6SSYpbb622g5gPBVHppSvp2MDShlxdkERSziOfN424nz2QwlPBHjLCAFiCDVKpNbVqoCLLVS1OT2J85a+2/f7h7AACnu/vm6e/cEAbnoFe3cVniUqfbElcfKtWmANBlUAZwkpM4wmg8Mc6OD/dwdHIDIgIAIgDS6bacj1YpiSPUG217jOJ5ophlnb4+nwWAlAAAoQ/UfDwEU6BcxsHbPZI4WplBvdHOS8j+A76vznQJRRqNJ3h6fFn0D1YPisxLRm3WgLWDzmXtAm26zn+ZquF6a4ZkbAAAACJ6VFh0U29mdHdhcmUAAHjac0zJT0pV8MxNTE8NSk1MqQQAL5wF1K4MqU0AAAAASUVORK5CYII=)
+![Vite](https://img.shields.io/badge/vite-%23646CFF.svg?style=for-the-badge&logo=vite&logoColor=white)
+![WebGL](https://img.shields.io/badge/WebGL-990000?style=for-the-badge&logo=webgl&logoColor=white)
 ![ESLint](https://img.shields.io/badge/ESLint-4B3263?style=for-the-badge&logo=eslint&logoColor=white)
 
 Welcome to Dino Run! This is a fun browser game where you help a brave little dinosaur run and jump over obstacles. But this isn't just any game - it's also a cool way to learn about coding!
@@ -21,18 +23,28 @@ While this project is based on the Chrome Dino Run game core mechanics, it'll li
 
 The code is written with lots of helpful comments that explain what's happening in simple terms (like we're explaining it to a 5-year-old). You'll find hopefully easy-to-understand explanations throughout the code.
 
+Originally this project was using DOM based rendering (See branches), after getting to a point where we wanted to make the game more interactive and visually appealing, we decided to make the switch to a Canvas based rendering.
+During the rewrite to Canvas though I ended up playing around with Phaser.js seperately and ultimately decided to use it for the game engine with the built-in WebGL based rendering support for DinoRun.
+
+The move to Phaser.js was a big decision for us, but it allowed us to focus on the game logic and gameplay much more, rather than the game engine itself - which for the kids has made this project a lot more fun to work on.
+
 ### ✨ Features
 
+- 🖼️ Phaser.js Engine with WebGL rendering pipeline
 - 🎮 Menu system
+- 🌞 Day and night cycle
+- 🌌 Sky system with stars and auroras
+- 🌤️ Cloud system
+- 🌡️ Weather system
 - 🦖 Control a cute dinosaur character
-- 🌵 Jump over obstacles like cacti, rocks, and holes
+- 🌳 Jump over obstacles like fauna, rocks, and holes
 - 🦅 Duck under flying birds
 - ⭐ Collect power-ups with special abilities:
   - ⏳ Slow Motion: Makes everything move slower
   - ⚡ Speed Boost: Makes everything move faster
 - 🎵 Sound effects
 - 💫 Kid-friendly code comments to learn programming
-- 📊 High score tracking
+- 📊 Score system with high score tracking
 
 ## 📋 Prerequisites
 
@@ -76,22 +88,21 @@ Ready to play? Here's how to get started:
 4. 🌐 Open your web browser and go to `http://localhost:8000`
 5. 🎮 Click 'Play' to start the game!
 
+Tips:
+- When you make changes to the code, save them and the game will automatically reload (called "hot reloading") without needing to restart the server or manually refresh the page.
+- When you start the server, the output in the terminal will show the URL for your local server (i.e. `http://localhost:8000`), and also a `network` URL (i.e. `http://192.168.1.XXX:8000`). The `network` URL can be used to play the game on your mobile device or another computer. You can also see these URLs at any time by typing `u` and then pressing `Enter` in the terminal while the server is running.
+
 Game Controls:
-- On Desktop:
+- On Computer:
   - Press `SPACE` or `UP ARROW` to jump (hold longer to jump higher!)
   - Press `CTRL` or `DOWN ARROW` to duck
 - On Mobile:
   - Swipe up or tap left side of screen to jump
   - Swipe down or tap right side of screen to crouch
 
-Tips:
-- 📖 Check the How to Play screen for detailed instructions
-- ⭐ Collect power-ups to get special abilities
-- 🏆 Try to beat your high score!
-
 When you're done playing:
 1. 🛑 Go back to the terminal
-2. ⌨️ Press `Ctrl + C` to stop the game server
+2. ⌨️ Press `q` then `Enter` to stop the game server
 
 ## 📁 Project Structure
 
@@ -99,28 +110,19 @@ Here's how our game files are organised:
 
 ```
 DinoRun/
-├── index.html            # The main game page
-├── styles.css            # Makes the game look pretty
-├── core/
-│   ├── game.js           # The main game engine 🎮
-│   ├── input.js          # Handles keyboard and touch controls 🎮
-│   ├── score.js          # Keeps track of your score 📊
-│   └── collision.js      # Checks when things bump into each other 💥
-├── entities/
-│   ├── dino.js           # Our dinosaur hero! 🦖
-│   ├── obstacle.js       # Things to jump over 🌵
-│   ├── powerup.js        # Special power-ups ⭐
-│   └── mob.js            # Moving creatures to avoid 🦅
-├── effects/
-│   └── particles.js      # Particle effects! 💨
-├── config/
-│   ├── obstacles.js      # Obstacle types and settings
-│   ├── powerups.js       # Power-up types and settings
-│   └── mobs.js           # Mob types and settings
-└── utils/
-    ├── constants.js      # Game settings and constants
-    ├── audio.js          # Sound effects and music 🎵
-    └── entity-helpers.js # Helper functions for game objects
+├── src/
+│   ├── assets/           # Game resources (images, sounds, etc.)
+│   │   ├── sprites/      # Sprite sheets and images
+│   │   ├── audio/        # Sound effects and music
+│   │   └── fonts/        # Custom game fonts
+│   ├── game/
+│   │   ├── scenes/       # Game scenes
+│   │   ├── objects/      # Game object classes
+│   │   ├── ui/           # UI components and overlays
+│   └── main.js           # Entry point & Game configuration
+├── index.html            # Main HTML file
+├── vite.config.js        # Vite configuration
+└── package.json          # Project dependencies
 ```
 
 ## 🎓 Learning from the Code
@@ -128,12 +130,10 @@ DinoRun/
 Want to learn how the game works? Start by looking at these files:
 
 1. First, check out `index.html` - it's like the game's skeleton
-2. Then look at `core/game.js` - it's the brain of our game!
-3. Look at `core/input.js` - it handles all the controls
-4. Check out `entities/dino.js` - it controls our dinosaur character
-5. Try reading `entities/obstacle.js` and `config/obstacles.js` to see how obstacles work
-6. Look at `entities/powerup.js` and `config/powerups.js` to learn about special abilities
-7. Finally, explore `entities/mob.js` and `config/mobs.js` to see how creatures work
+2. Then look at `src/game/config.js` - it's the brain of our game!
+3. Look at `src/game/objects/` - it handles all the game objects
+4. Check out `src/game/scenes/` - it controls our game scenes
+5. Try reading `src/game/ui/` to see how the UI works
 
 All the code has comments that explain what's happening!
 
@@ -166,9 +166,9 @@ Found a way to make the game better? Want to add more kid-friendly comments? Her
    ```
    Or to automatically fix issues:
    ```bash
-   npm run format
+   npm run lint:fix
    ```
-   Both commands will check your code style, but `format` will try to fix issues automatically!
+   Both commands will check your code style, but `lint:fix` will try to fix issues automatically!
 5. Add your changes
 6. Submit a pull request
 
