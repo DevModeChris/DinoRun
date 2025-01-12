@@ -36,6 +36,9 @@ export class Ground extends Phaser.GameObjects.TileSprite {
         // Set the origin to top-left since we're scrolling from right to left
         this.setOrigin(0, 0);
 
+        // Set depth above sky,stars,etc but below lighting and ui
+        this.setDepth(200);
+
         // Add to scene's display list
         scene.add.existing(this);
     }

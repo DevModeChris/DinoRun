@@ -4,6 +4,7 @@
  * This is where all the dino's special moves come from.
  */
 import Phaser from 'phaser';
+import { checkIfMobile } from '../../utils/helpers.js';
 
 export class Dino extends Phaser.GameObjects.Sprite {
     /** @type {number} */
@@ -39,8 +40,23 @@ export class Dino extends Phaser.GameObjects.Sprite {
     /** @type {boolean} */
     #wasInAir = false;
 
-    /** @type {Phaser.Types.Input.Keyboard.CursorKeys} */
-    #cursors;
+    /** @type {Object} */
+    #keys;
+
+    /** @type {boolean} */
+    #isMobile;
+
+    /** @type {Set<number>} */
+    #activeJumpPointers = new Set();
+
+    /** @type {Set<number>} */
+    #activeDuckPointers = new Set();
+
+    /** @type {Phaser.GameObjects.Sprite} */
+    #jumpButton;
+
+    /** @type {Phaser.GameObjects.Sprite} */
+    #duckButton;
 
     /**
      * Creates our lovable dino character! 🦖
@@ -54,6 +70,9 @@ export class Dino extends Phaser.GameObjects.Sprite {
 
         // Set up the dino's size and origin
         this.setOrigin(0.5, 1);
+
+        // Set depth above sky,stars,etc but below lighting and ui
+        this.setDepth(200);
 
         // Add to the scene and enable physics
         scene.add.existing(this);
@@ -69,13 +88,107 @@ export class Dino extends Phaser.GameObjects.Sprite {
         this.#createAnimations();
 
         // Set up keyboard controls
-        this.#cursors = scene.input.keyboard.createCursorKeys();
+        this.#keys = scene.input.keyboard.addKeys('UP, DOWN, SPACE, CTRL');
+
+        // Check if we're on mobile and set up mobile controls if needed
+        this.#isMobile = checkIfMobile();
+        if (this.#isMobile) {
+            // Enable multi-touch
+            scene.input.addPointer(2);
+            this.#setupMobileControls();
+        }
 
         // Start idle animation
         this.play('dino-idle');
 
         // Listen for animation complete
         this.on('animationcomplete', this.#onAnimationComplete, this);
+    }
+
+    /**
+     * Sets up mobile control buttons
+     * Like adding touch-screen magic to our game! 📱
+     */
+    #setupMobileControls() {
+        const { width, height } = this.scene.scale;
+        const buttonAlpha = 0.5; // 50% opacity
+        const padding = 20;
+
+        // Create jump button in bottom left
+        this.#jumpButton = this.scene.add.sprite(
+            padding,
+            height - padding,
+            'ui-elements-sprites',
+            'mobileJumpBtn',
+        )
+            .setOrigin(0, 1)
+            .setDepth(1000)
+            .setAlpha(buttonAlpha)
+            .setScrollFactor(0)
+            .setInteractive();
+
+        // Create duck button in bottom right
+        this.#duckButton = this.scene.add.sprite(
+            width - padding,
+            height - padding,
+            'ui-elements-sprites',
+            'mobileDuckBtn',
+        )
+            .setOrigin(1, 1)
+            .setDepth(1000)
+            .setAlpha(buttonAlpha)
+            .setScrollFactor(0)
+            .setInteractive();
+
+        // Set up touch handlers for jump button
+        this.#jumpButton.on('pointerdown', (pointer) => {
+            this.#activeJumpPointers.add(pointer.id);
+        });
+
+        this.#jumpButton.on('pointerup', (pointer) => {
+            this.#activeJumpPointers.delete(pointer.id);
+        });
+
+        this.#jumpButton.on('pointerout', (pointer) => {
+            this.#activeJumpPointers.delete(pointer.id);
+        });
+
+        // Set up touch handlers for duck button
+        this.#duckButton.on('pointerdown', (pointer) => {
+            this.#activeDuckPointers.add(pointer.id);
+        });
+
+        this.#duckButton.on('pointerup', (pointer) => {
+            this.#activeDuckPointers.delete(pointer.id);
+        });
+
+        this.#duckButton.on('pointerout', (pointer) => {
+            this.#activeDuckPointers.delete(pointer.id);
+        });
+
+        // Listen for resize events to update button positions
+        this.scene.scale.on('resize', this.#updateMobileControlPositions, this);
+    }
+
+    /**
+     * Updates mobile control button positions after resize
+     * Like rearranging furniture in a room! 🏠
+     */
+    #updateMobileControlPositions() {
+        if (!this.#isMobile) {
+            return;
+        }
+
+        const { width, height } = this.scene.scale;
+        const padding = 20;
+
+        if (this.#jumpButton) {
+            this.#jumpButton.setPosition(padding, height - padding);
+        }
+
+        if (this.#duckButton) {
+            this.#duckButton.setPosition(width - padding, height - padding);
+        }
     }
 
     /**
@@ -88,27 +201,40 @@ export class Dino extends Phaser.GameObjects.Sprite {
         const wasJumping = this.#isJumping;
         this.#isJumping = !body.touching.down;
 
-        // Handle jumping
-        if ((this.#cursors.up.isDown || this.#cursors.space.isDown) && body.touching.down) {
-            this.#jump();
+        // Handle keyboard controls
+        if ((this.#keys.UP.isDown || this.#keys.SPACE.isDown) && body.touching.down) {
+            this.jump();
         }
 
-        // Handle ducking
-        if (this.#cursors.down.isDown) {
-            if (!this.#isDucking) {
-                this.#duck();
+        if (this.#keys.DOWN.isDown || this.#keys.CTRL.isDown) {
+            this.duck();
+        }
+        else if (this.#activeDuckPointers.size === 0 && this.#isDucking) {
+            this.stand();
+        }
+
+        // Handle mobile controls
+        if (this.#isMobile) {
+            if (this.#activeJumpPointers.size > 0 && body.touching.down) {
+                this.jump();
             }
 
-            // If we're jumping, pause the animation on first frame
-            if (this.#isJumping) {
-                this.anims.pause();
+            if (this.#activeDuckPointers.size > 0) {
+                this.duck();
             }
-        }
-        else if (this.#isDucking) {
-            this.#standUp();
         }
 
         // Update animations
+        this.#updateAnimations(wasJumping);
+    }
+
+    /**
+     * Updates the dino's animations based on its current state
+     * Like a puppeteer pulling the right strings! 🎭
+     *
+     * @param {boolean} wasJumping - Whether the dino was jumping in the previous frame
+     */
+    #updateAnimations(wasJumping) {
         if (this.#isJumping) {
             if (!wasJumping) {
                 // Just started jumping
@@ -119,6 +245,11 @@ export class Dino extends Phaser.GameObjects.Sprite {
                 this.setFrame('jump-3');
             }
             this.#wasInAir = true;
+
+            // If ducking while jumping, pause the animation
+            if (this.#isDucking) {
+                this.anims.pause();
+            }
         }
         else if (this.#wasInAir) {
             // Just landed
@@ -226,9 +357,9 @@ export class Dino extends Phaser.GameObjects.Sprite {
      * Handles animation complete events
      *
      * @param {Phaser.Animations.Animation} animation - The animation that completed
-     * @param {Phaser.Animations.AnimationFrame} frame - The final animation frame
+     * @param {Phaser.Animations.AnimationFrame} _frame - The final animation frame
      */
-    #onAnimationComplete(animation, frame) {
+    #onAnimationComplete(animation, _frame) {
         if (animation.key === 'dino-jump-land') {
             this.play('dino-run', true);
         }
@@ -237,29 +368,53 @@ export class Dino extends Phaser.GameObjects.Sprite {
     /**
      * Makes the dino jump! 🦘
      */
-    #jump() {
+    jump() {
         /** @type {Phaser.Physics.Arcade.Body} */
         const body = this.body;
-        body.setVelocityY(-this.#jumpForce);
-        this.#isJumping = true;
-        this.play('dino-jump-up');
+        if (body.touching.down) {
+            body.setVelocityY(-this.#jumpForce);
+            this.#isJumping = true;
+            this.play('dino-jump-up');
+        }
     }
 
     /**
      * Makes the dino duck down 🦆
      */
-    #duck() {
-        this.#isDucking = true;
-        this.#updateHitbox(true);
-        this.play('dino-duck', true);
+    duck() {
+        if (!this.#isDucking) {
+            this.#isDucking = true;
+            this.#updateHitbox(true);
+            this.play('dino-duck', true);
+        }
     }
 
     /**
      * Makes the dino stand back up 🦖
      */
-    #standUp() {
-        this.#isDucking = false;
-        this.#updateHitbox(false);
+    stand() {
+        if (this.#isDucking) {
+            this.#isDucking = false;
+            this.#updateHitbox(false);
+        }
+    }
+
+    /**
+     * Checks if the dino is currently ducking
+     *
+     * @returns {boolean} True if the dino is ducking
+     */
+    isDucking() {
+        return this.#isDucking;
+    }
+
+    /**
+     * Checks if the dino is currently jumping
+     *
+     * @returns {boolean} True if the dino is jumping
+     */
+    isJumping() {
+        return this.#isJumping;
     }
 
     /**

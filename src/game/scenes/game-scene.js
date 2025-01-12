@@ -125,6 +125,13 @@ export class GameScene extends Phaser.Scene {
             'truetype',
         );
 
+        // Load the UI elements spritesheet and its data
+        this.load.atlas(
+            'ui-elements-sprites',
+            'src/assets/sprites/ui-elements.png',
+            'src/assets/sprites/ui-elements.json',
+        );
+
         // Load the ground spritesheet and its data
         this.load.atlas(
             'ground-sprites',
@@ -205,7 +212,7 @@ export class GameScene extends Phaser.Scene {
         this.#startSpawning('rock', () => this.#spawnRock(), 1000, 7000);
 
         // Initialise score display
-        const fontSize = Math.round(36 * this.#scaleFactor);
+        const fontSize = Math.round(28);
         this.#scoreDisplay = new ScoreDisplay(
             this,
             width - (20 * this.#scaleFactor),
@@ -483,6 +490,9 @@ export class GameScene extends Phaser.Scene {
             return;
         }
 
+        // Update dino (handles keyboard and mobile controls)
+        this.#dino.update();
+
         // Update our magical sky ✨
         this.#skySystem.update(delta, time);
 
@@ -530,9 +540,6 @@ export class GameScene extends Phaser.Scene {
 
         // Update ground scrolling
         this.#ground.update(delta);
-
-        // Update dino
-        this.#dino.update();
 
         // Update all enemies
         this.#enemies.getChildren().forEach((enemy) => {

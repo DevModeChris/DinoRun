@@ -24,6 +24,9 @@ export class Obstacle extends Phaser.GameObjects.Sprite {
 
         this.#scrollSpeed = scrollSpeed;
 
+        // Set depth above sky,stars,etc but below lighting and ui
+        this.setDepth(200);
+
         // Add to the scene
         scene.add.existing(this);
     }

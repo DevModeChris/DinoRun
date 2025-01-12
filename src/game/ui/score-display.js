@@ -37,7 +37,7 @@ export class ScoreDisplay {
 
         // Create high score text
         this.#highScoreText = scene.add.text(x, y, `Best: ${this.#highScore}`, textConfig)
-            .setDepth(999)
+            .setDepth(1000)
             .setScrollFactor(0)
             .setOrigin(1, 0); // Align to right edge
 
@@ -49,7 +49,7 @@ export class ScoreDisplay {
             'Score: 0',
             textConfig,
         )
-            .setDepth(999)
+            .setDepth(1000)
             .setScrollFactor(0)
             .setOrigin(1, 0); // Align to right edge
     }

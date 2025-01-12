@@ -387,7 +387,7 @@ export class SkySystem {
 
         // Create graphics object for clouds
         this.#cloudGraphics = this.#scene.add.graphics()
-            .setDepth(120)  // Below stars but above aurora
+            .setDepth(160)  // Below stars but above aurora
             .setScrollFactor(0);
     }
 

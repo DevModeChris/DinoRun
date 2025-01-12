@@ -32,6 +32,9 @@ export class Bird extends Phaser.GameObjects.Sprite {
     constructor(scene, x, y, speed) {
         super(scene, x, y, 'bird-sprites');
 
+        // Set depth above sky,stars,etc but below lighting and ui
+        this.setDepth(200);
+
         // Add to scene and enable physics
         scene.add.existing(this);
         scene.physics.add.existing(this);
