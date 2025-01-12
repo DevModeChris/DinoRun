@@ -10,6 +10,9 @@ export class SkySystem {
     /** @type {Phaser.Scene} */
     #scene;
 
+    /** @type {number} */
+    #timeOfDay;
+
     /** @type {Phaser.GameObjects.Graphics} */
     #skyGradient;
 
@@ -19,23 +22,23 @@ export class SkySystem {
     /** @type {Phaser.GameObjects.Container} */
     #starContainer;
 
+    /** @type {Array<{star: Phaser.GameObjects.Sprite, twinkleSpeed: number, twinkleOffset: number}>} */
+    #stars = [];
+
     /** @type {Phaser.GameObjects.Graphics} */
     #auroraGraphics;
+
+    /** @type {Array<{y: number, offset: number, speed: number}>} */
+    #auroraWaves = [];
 
     /** @type {Phaser.GameObjects.Graphics} */
     #cloudGraphics;
 
-    /** @type {Array<{star: Phaser.GameObjects.Rectangle, twinkleSpeed: number, twinkleOffset: number}>} */
-    #stars = [];
-
-    /** @type {Array<{x: number, y: number, wavelength: number, speed: number, amplitude: number}>} */
-    #auroraWaves = [];
-
-    /** @type {Array<Object>} */
+    /** @type {Array<{x: number, y: number, speed: number, size: number}>} */
     #clouds = [];
 
-    /** @type {number} */
-    #timeOfDay;
+    /** @type {(gameSize: Phaser.Structs.Size) => void} */
+    #resizeListener;
 
     /** @type {boolean} */
     #isAuroraActive = false;
@@ -95,14 +98,15 @@ export class SkySystem {
 
     /** @type {Object} */
     static STAR_CONFIG = {
-        ENABLED: true,      // Enable stars
-        COUNT: 50,          // Number of stars
-        MIN_SIZE: 1,        // Minimum star size in pixels
-        MAX_SIZE: 3,        // Maximum star size in pixels
-        MIN_ALPHA: 0.3,     // Minimum star brightness
-        MAX_ALPHA: 1,       // Maximum star brightness
+        ENABLED: true,        // Enable stars
+        COUNT: 50,            // Number of stars
+        MIN_SIZE: 1,          // Minimum star size in pixels
+        MAX_SIZE: 3,          // Maximum star size in pixels
+        MIN_ALPHA: 0.3,       // Minimum star brightness
+        MAX_ALPHA: 1,         // Maximum star brightness
         TWINKLE_SPEED_MIN: 1, // Minimum twinkle speed multiplier
         TWINKLE_SPEED_MAX: 3, // Maximum twinkle speed multiplier
+        Y_SPAWN_AREA: 0.9,    // Percentage of sky the stars spawn in (Top 90%)
     };
 
     /** @type {Object} */
@@ -211,23 +215,20 @@ export class SkySystem {
         this.#scene = scene;
         this.#timeOfDay = Math.random(); // Start at a random time
 
-        // Create our gradient background
+        // Create all components first
         this.#createSkyGradient();
-
-        // Create our lighting system
         this.#createLighting();
-
-        // Create our star system
         this.#createStars();
-
-        // Create our aurora system
         this.#createAurora();
-
-        // Create our cloud system
         this.#createClouds();
-
-        // Create our weather effects system
         this.#createWeatherEffects();
+
+        // Now bind resize event after all components are created
+        this.#resizeListener = this.resize.bind(this);
+        this.#scene.scale.on('resize', this.#resizeListener);
+
+        // Clean up when scene shuts down
+        this.#scene.events.once('shutdown', this.destroy, this);
     }
 
     /**
@@ -236,31 +237,68 @@ export class SkySystem {
     #createSkyGradient() {
         this.#skyGradient = this.#scene.add.graphics();
         this.#updateSkyGradient();
-
-        // Make the sky resize with the game
-        this.#scene.scale.on('resize', () => this.#updateSkyGradient());
     }
 
     /**
      * Creates the lighting effects system
      */
     #createLighting() {
+        // Get initial dimensions
+        const width = this.#scene.scale.width || window.innerWidth;
+        const height = this.#scene.scale.height || window.innerHeight;
+
         // Create a full-screen rectangle for lighting effects
         this.#lighting = this.#scene.add.rectangle(
             0, 0,
-            this.#scene.scale.width,
-            this.#scene.scale.height,
+            width,
+            height,
             0x000000,
             0,
         )
             .setOrigin(0, 0)
             .setScrollFactor(0)
             .setDepth(500);  // Above game objects but below UI
+    }
 
-        // Update lighting on resize
-        this.#scene.scale.on('resize', (gameSize) => {
-            this.#lighting.setSize(gameSize.width, gameSize.height);
-        });
+    /**
+     * Updates sizes and positions of all sky elements
+     *
+     * @param {Phaser.Structs.Size} gameSize - New game size
+     */
+    resize(gameSize) {
+        const { width, height } = gameSize;
+
+        // Update sky gradient
+        if (this.#skyGradient && !this.#skyGradient.destroyed) {
+            this.#updateSkyGradient();
+        }
+
+        // Update lighting
+        if (this.#lighting && !this.#lighting.destroyed) {
+            this.#lighting.setSize(width, height);
+        }
+
+        // Update star container
+        if (this.#starContainer && !this.#starContainer.destroyed) {
+            // Reposition stars within new bounds
+            this.#stars.forEach(({ star }) => {
+                if (star && !star.destroyed) {
+                    star.setPosition(
+                        Math.random() * width,
+                        Math.random() * (height * SkySystem.STAR_CONFIG.Y_SPAWN_AREA),
+                    );
+                }
+            });
+        }
+
+        // Update aurora if active
+        if (this.#auroraGraphics && !this.#auroraGraphics.destroyed) {
+            for (let i = 0; i < this.#auroraWaves.length; i++) {
+                this.#auroraWaves[i].y = ((height * 0.2) + (i * 30));
+            }
+
+            // this.#updateAurora();
+        }
     }
 
     /**
@@ -280,7 +318,7 @@ export class SkySystem {
         for (let i = 0; i < SkySystem.STAR_CONFIG.COUNT; i++) {
             // Random position within the screen bounds
             const x = Math.random() * this.#scene.scale.width;
-            const y = Math.random() * (this.#scene.scale.height * 0.9); // Only in top 90% of sky
+            const y = Math.random() * (this.#scene.scale.height * SkySystem.STAR_CONFIG.Y_SPAWN_AREA);
 
             // Random size between min and max
             const size = Phaser.Math.Between(
@@ -302,21 +340,6 @@ export class SkySystem {
             // Add to container and tracking array
             this.#starContainer.add(star);
             this.#stars.push({ star, twinkleSpeed, twinkleOffset });
-        }
-
-        // Handle window resizing
-        this.#scene.scale.on('resize', this.#repositionStars, this);
-    }
-
-    /**
-     * Repositions stars when the window is resized
-     */
-    #repositionStars() {
-        for (const { star } of this.#stars) {
-            star.setPosition(
-                Math.random() * this.#scene.scale.width,
-                Math.random() * (this.#scene.scale.height * 0.6),
-            );
         }
     }
 
@@ -351,18 +374,6 @@ export class SkySystem {
                     SkySystem.AURORA_CONFIG.MAX_AMPLITUDE,
                 ),
             });
-        }
-
-        // Handle window resizing
-        this.#scene.scale.on('resize', this.#repositionAurora, this);
-    }
-
-    /**
-     * Repositions aurora waves when the window is resized
-     */
-    #repositionAurora() {
-        for (let i = 0; i < this.#auroraWaves.length; i++) {
-            this.#auroraWaves[i].y = ((this.#scene.scale.height * 0.2) + (i * 30));
         }
     }
 
@@ -1032,5 +1043,37 @@ export class SkySystem {
         this.#updateAurora(time);
         this.#updateClouds(time);
         this.#updateWeather(delta);
+    }
+
+    /**
+     * Cleans up the sky system
+     */
+    destroy() {
+        // Remove resize listener
+        if (this.#scene && this.#scene.scale) {
+            this.#scene.scale.off('resize', this.#resizeListener);
+        }
+
+        // Clean up all components
+        if (this.#skyGradient && !this.#skyGradient.destroyed) {
+            this.#skyGradient.destroy();
+        }
+        if (this.#lighting && !this.#lighting.destroyed) {
+            this.#lighting.destroy();
+        }
+        if (this.#starContainer && !this.#starContainer.destroyed) {
+            this.#starContainer.destroy();
+        }
+        if (this.#auroraGraphics && !this.#auroraGraphics.destroyed) {
+            this.#auroraGraphics.destroy();
+        }
+        if (this.#cloudGraphics && !this.#cloudGraphics.destroyed) {
+            this.#cloudGraphics.destroy();
+        }
+
+        // Clear arrays
+        this.#stars = [];
+        this.#auroraWaves = [];
+        this.#clouds = [];
     }
 }

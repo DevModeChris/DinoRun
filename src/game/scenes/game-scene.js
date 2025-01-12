@@ -12,13 +12,14 @@ import { SmallRock } from '../objects/small-rock.js';
 import { SkySystem } from '../objects/sky-system.js';
 import { ScoreDisplay } from '../ui/score-display.js';
 import { DifficultyManager } from '../systems/difficulty-manager.js';
+import { checkIfMobile } from '../../utils/helpers.js';
 
 export class GameScene extends Phaser.Scene {
     /** @type {number} */
     #groundCollisionHeight = 40; // Height of the collision area (not the full sprite height)
 
     /** @type {boolean} */
-    #gameOver = false;
+    #isGameOver = false;
 
     /** @type {Ground} */
     #ground;
@@ -62,15 +63,26 @@ export class GameScene extends Phaser.Scene {
     /** @type {number} */
     #scoreUpdateInterval = 100; // Update score every 100ms
 
+    /** @type {number} */
+    #baseHeight = 720; // Base height for scaling calculations
+
+    /** @type {number} */
+    #dinoX = 100;
+
+    /** @type {number} */
+    #groundY = 0;
+
+    /** @type {number} */
+    #scaleFactor = 1;
+
+    /** @type {Phaser.GameObjects.Text} */
+    #gameOverText;
+
+    /** @type {boolean} */
+    #isMobile = false;
+
     constructor() {
-        super({
-            key: 'GameScene',
-            physics: {
-                arcade: {
-                    debug: false,
-                },
-            },
-        });
+        super('GameScene');
     }
 
     /**
@@ -147,20 +159,108 @@ export class GameScene extends Phaser.Scene {
      */
     create() {
         // Reset game state
-        this.#gameOver = false;
+        this.#isGameOver = false;
         this.physics.resume();
 
-        // Create our magical sky system ✨
+        // Detect if we're on a mobile device
+        this.#isMobile = checkIfMobile();
+
+        const { width, height } = this.scale;
+
+        // Calculate initial positions
+        this.#calculatePositions();
+
+        // Create our beautiful sky
         this.#skySystem = new SkySystem(this);
 
         // Create difficulty manager
         this.#difficultyManager = new DifficultyManager();
 
+        // Create the invisible platform for physics
+        this.#platform = this.add.rectangle(
+            width / 2,
+            this.#groundY + (this.#groundCollisionHeight / 2),
+            width,
+            this.#groundCollisionHeight,
+            0xFF0000,
+            0,
+        );
+        this.physics.add.existing(this.#platform, true);
+
+        // Create the visual scrolling ground
+        this.#ground = new Ground(this, height - Ground.HEIGHT, 'ground-sprites', 'purpleGrass');
+        this.#ground.width = width;
+
+        // Create our dino character at fixed position
+        this.#dino = new Dino(this, this.#dinoX, this.#groundY - (this.#groundCollisionHeight / 2));
+
+        // Make the dino collide with the platform
+        this.physics.add.collider(this.#dino, this.#platform);
+
+        // Create a group for all enemies
+        this.#enemies = this.add.group();
+
+        // Start spawning enemies
+        this.#startSpawning('bird', () => this.#spawnBird(), 4000, 14000);
+        this.#startSpawning('rock', () => this.#spawnRock(), 1000, 7000);
+
+        // Initialise score display
+        const fontSize = Math.round(36 * this.#scaleFactor);
+        this.#scoreDisplay = new ScoreDisplay(
+            this,
+            width - (20 * this.#scaleFactor),
+            20 * this.#scaleFactor,
+            fontSize,
+        );
+
+        // Create game over text (hidden initially)
+        this.#createGameOverText();
+
         // Create debug text (hidden by default)
+        this.#createDebugText();
+
+        // Listen for resize events
+        this.scale.on('resize', this.resize, this);
+
+        // Set up collision detection
+        this.physics.add.overlap(
+            this.#dino,
+            this.#enemies,
+            this.#handleEnemyCollision,
+            null,
+            this,
+        );
+
+        // Set up debug controls
+        const keys = this.input.keyboard.addKeys('TAB');
+        this.#debugKey = keys.TAB;
+
+        // Enable debug mode to see collision boxes
+        this.physics.world.createDebugGraphic();
+        this.physics.world.debugGraphic.visible = this.#debugMode;
+    }
+
+    /**
+     * Calculates positions for game objects based on current screen size
+     */
+    #calculatePositions() {
+        const { _width, height } = this.scale;
+
+        // Calculate scale factor for UI elements only
+        this.#scaleFactor = height / this.#baseHeight;
+
+        // Ground is always at the bottom
+        this.#groundY = height - this.#groundCollisionHeight;
+    }
+
+    /**
+     * Creates the debug text overlay
+     */
+    #createDebugText() {
         const padding = 4;
         const buffer = 4;
 
-        // Then create text first to measure it
+        // Create text first to measure it
         this.#debugText = this.add.text(16, 16, '🕒 Time: 24:00', {  // Maximum length text
             fontFamily: 'monospace',
             fontSize: '13px',
@@ -197,52 +297,34 @@ export class GameScene extends Phaser.Scene {
 
         // Clear the initial measuring text
         this.#debugText.setText('');
+    }
 
-        // Calculate ground position
-        const groundY = this.scale.height - this.#groundCollisionHeight;
+    /**
+     * Creates the game over text
+     */
+    #createGameOverText() {
+        const { width, height } = this.scale;
+        const fontSize = Math.round(52 * this.#scaleFactor);
+        const message = this.#isMobile ? 'Tap to Play Again' : 'Press SPACE to Play Again';
 
-        // Create invisible platform for physics at the bottom portion of the ground
-        this.#platform = this.add.rectangle(
-            this.scale.width / 2,
-            groundY + (this.#groundCollisionHeight / 2),
-            this.scale.width,
-            this.#groundCollisionHeight,
-            0x000000,
-            0,
-        );
-        this.physics.add.existing(this.#platform, true);
-        this.#platform.setAlpha(0); // Start invisible
-
-        // Create the visual scrolling ground - positioned to align with platform
-        this.#ground = new Ground(this, this.scale.height - Ground.HEIGHT, 'ground-sprites', 'purpleGrass');
-        this.#ground.width = this.scale.width;
-
-        // Create our dino character
-        this.#dino = new Dino(this, 100, groundY - 20);
-
-        // Make the dino collide with the platform
-        this.physics.add.collider(this.#dino, this.#platform);
-
-        // Enable debug mode to see collision boxes
-        this.physics.world.createDebugGraphic();
-        this.physics.world.debugGraphic.visible = this.#debugMode;
-
-        // Listen for resize events
-        this.scale.on('resize', this.resize, this);
-
-        // Create a group for all enemies
-        this.#enemies = this.add.group();
-
-        // Start spawning enemies
-        this.#startSpawning('bird', () => this.#spawnBird(), 4000, 14000);
-        this.#startSpawning('rock', () => this.#spawnRock(), 1000, 7000);
-
-        // Initialise score display in top right corner with padding
-        this.#scoreDisplay = new ScoreDisplay(this, this.cameras.main.width - 20, 20);
-
-        // Set up debug controls
-        const keys = this.input.keyboard.addKeys('TAB');
-        this.#debugKey = keys.TAB;
+        this.#gameOverText = this.add.text(
+            width / 2,
+            height / 2,
+            ['GAME OVER', message],
+            {
+                fontFamily: 'annie-use-your-telescope',
+                fontSize: `${fontSize}px`,
+                fill: '#ffffff',
+                align: 'center',
+                lineSpacing: 20,
+                stroke: '#000000',
+                strokeThickness: 3,
+            },
+        )
+            .setOrigin(0.5)
+            .setScrollFactor(0)
+            .setDepth(1000)
+            .setVisible(false);  // Start hidden
     }
 
     /**
@@ -251,18 +333,17 @@ export class GameScene extends Phaser.Scene {
      * @param {Phaser.Structs.Size} gameSize - New game size
      */
     resize(gameSize) {
-        const width = gameSize.width;
-        const height = gameSize.height;
+        const { width, height } = gameSize;
 
-        // Calculate ground position
-        const groundY = height - this.#groundCollisionHeight;
+        // Recalculate positions
+        this.#calculatePositions();
 
-        // Update ground position and size
+        // Update ground position and size (only width changes)
         this.#ground.setPosition(0, height - Ground.HEIGHT);
         this.#ground.width = width;
 
         // Update platform position and size
-        this.#platform.setPosition(width / 2, groundY + (this.#groundCollisionHeight / 2));
+        this.#platform.setPosition(width / 2, this.#groundY + (this.#groundCollisionHeight / 2));
         this.#platform.width = width;
 
         // Update platform physics body
@@ -271,8 +352,37 @@ export class GameScene extends Phaser.Scene {
         body.setSize(width, this.#groundCollisionHeight);
         body.updateFromGameObject();
 
-        // Update dino position
-        this.#dino.setY(groundY - 20);
+        // Update dino Y position only
+        this.#dino.setPosition(this.#dinoX, this.#groundY - (this.#groundCollisionHeight / 2));
+
+        // Update score display position and scale (UI element)
+        const fontSize = Math.round(36 * this.#scaleFactor);
+        this.#scoreDisplay.updateFontSize(fontSize);
+        this.#scoreDisplay.updatePosition(width - (20 * this.#scaleFactor), 20 * this.#scaleFactor);
+
+        // Recheck mobile status
+        this.#isMobile = checkIfMobile();
+
+        // Update game over text if it exists (UI element)
+        if (this.#gameOverText) {
+            const message = this.#isMobile ? 'Tap to Play Again' : 'Press SPACE to Play Again';
+            this.#gameOverText
+                .setPosition(width / 2, height / 2)
+                .setStyle({ fontSize: `${Math.round(52 * this.#scaleFactor)}px` })
+                .setText(['GAME OVER', message]);
+        }
+
+        // Update active obstacles Y position
+        this.#enemies.getChildren().forEach((enemy) => {
+            if (enemy instanceof Bird) {
+                // Update bird height relative to ground
+                enemy.y = this.#groundY - 100;
+            }
+            else {
+                // Update rock position to ground level
+                enemy.y = this.#groundY;
+            }
+        });
     }
 
     /**
@@ -285,7 +395,7 @@ export class GameScene extends Phaser.Scene {
      */
     #startSpawning(type, spawnFunc, minDelay, maxDelay) {
         const spawn = () => {
-            if (this.#gameOver) {
+            if (this.#isGameOver) {
                 return;
             }
 
@@ -319,12 +429,12 @@ export class GameScene extends Phaser.Scene {
     }
 
     /**
-     * Spawns a new bird enemy
+     * Spawns a bird at the current difficulty level
      *
      * @returns {Bird} The spawned bird
      */
     #spawnBird() {
-        if (this.#gameOver) {
+        if (this.#isGameOver) {
             return null;
         }
 
@@ -336,23 +446,21 @@ export class GameScene extends Phaser.Scene {
         const finalSpeed = baseSpeed * speedMultiplier;
 
         // Spawn bird with scaled random speed
-        const bird = new Bird(
+        return new Bird(
             this,
             this.scale.width + 100,
             Phaser.Math.Between(100, this.scale.height - 200),
             finalSpeed,
         );
-
-        return bird;
     }
 
     /**
-     * Spawns a new rock obstacle
+     * Spawns a rock at the current difficulty level
      *
      * @returns {SmallRock} The spawned rock
      */
     #spawnRock() {
-        if (this.#gameOver) {
+        if (this.#isGameOver) {
             return null;
         }
 
@@ -371,7 +479,7 @@ export class GameScene extends Phaser.Scene {
      * @param {number} delta - The time in milliseconds since the last update
      */
     update(time, delta) {
-        if (this.#gameOver) {
+        if (this.#isGameOver) {
             return;
         }
 
@@ -487,20 +595,20 @@ export class GameScene extends Phaser.Scene {
      * @param {Phaser.GameObjects.Sprite} enemy - The enemy (bird or obstacle) that hit the dino
      */
     #handleEnemyCollision(dino, enemy) {
-        if (this.#gameOver) {
+        if (this.#isGameOver) {
             return;
         }
 
-        this.#gameOver = true;
+        this.#isGameOver = true;
 
         // Stop enemy movement based on physics body type
         if (enemy.body) {
             if (enemy.body instanceof Phaser.Physics.Arcade.Body) {
-                // Dynamic bodies (like birds)
+                // Dynamic bodies
                 enemy.body.setVelocity(0, 0);
             }
             else if (enemy.body instanceof Phaser.Physics.Arcade.StaticBody) {
-                // Static bodies (like rocks)
+                // Static bodies
                 enemy.body.enable = false;
             }
         }
@@ -518,26 +626,38 @@ export class GameScene extends Phaser.Scene {
         this.#scoreDisplay.reset();
         this.#difficultyManager.reset();
 
-        // Add game over text
-        const gameOverText = this.add.text(
-            this.scale.width / 2,
-            this.scale.height / 2,
-            'GAME OVER\nPress SPACE to restart',
-            {
-                fontFamily: 'annie-use-your-telescope',
-                fontSize: '58px',
-                color: '#ffffff',
-                align: 'center',
-                lineSpacing: 20,
-            },
-        )
-            .setDepth(999)
-            .setOrigin(0.5);
+        // Show game over text
+        this.#gameOverText.setVisible(true);
 
-        // Listen for space to restart
-        this.input.keyboard.once('keydown-SPACE', () => {
-            gameOverText.destroy();
-            this.scene.restart();
-        });
+        // Listen for restart input
+        if (this.#isMobile) {
+            // Listen for tap to restart
+            this.input.once('pointerdown', () => {
+                this.#restartGame();
+            });
+        }
+        else {
+            // Listen for space to restart
+            this.input.keyboard.once('keydown-SPACE', () => {
+                this.#restartGame();
+            });
+        }
+    }
+
+    /**
+     * Restarts the game after game over
+     */
+    #restartGame() {
+        // Clean up existing objects
+        if (this.#gameOverText) {
+            this.#gameOverText.destroy();
+            this.#gameOverText = null;
+        }
+
+        // Reset game state
+        this.#isGameOver = false;
+
+        // Restart the scene
+        this.scene.restart();
     }
 }

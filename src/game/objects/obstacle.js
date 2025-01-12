@@ -64,9 +64,9 @@ export class Obstacle extends Phaser.GameObjects.Sprite {
      * Updates the obstacle position each frame to move with the ground
      * Like it's glued to our scrolling ground! 🏃‍♂️
      *
-     * @param {number} delta - Time since last update in milliseconds
+     * @param {number} _delta - Time since last update in milliseconds
      */
-    update(delta) {
+    update(_delta) {
         // Get the current ground speed from the game scene
         const currentSpeed = this.scene.getGroundSpeed();
 

@@ -23,12 +23,13 @@ export class ScoreDisplay {
      * @param {Phaser.Scene} scene - The game scene where we'll show the score
      * @param {number} x - Where to put the score on the screen (left to right)
      * @param {number} y - Where to put the score on the screen (top to bottom)
+     * @param {number} [fontSize=28] - Size of the score text
      */
-    constructor(scene, x, y) {
+    constructor(scene, x, y, fontSize = 28) {
         this.#loadHighScore();
 
         const textConfig = {
-            fontSize: '28px',
+            fontSize: `${fontSize}px`,
             fontFamily: 'annie-use-your-telescope',
             fill: '#FFFFFF',
             align: 'right',
@@ -123,5 +124,41 @@ export class ScoreDisplay {
     reset() {
         this.#currentScore = 0;
         this.#currentScoreText.setText(`Score: ${this.#currentScore}`);
+    }
+
+    /**
+     * Updates the position of both score texts
+     *
+     * @param {number} x - New x position
+     * @param {number} y - New y position
+     */
+    updatePosition(x, y) {
+        // Update high score position
+        this.#highScoreText.setPosition(x, y);
+
+        // Update current score position relative to high score
+        const padding = 20;
+        this.#currentScoreText.setPosition(
+            x - this.#highScoreText.width - padding,
+            y,
+        );
+    }
+
+    /**
+     * Updates the font size of both score texts
+     *
+     * @param {number} size - New font size in pixels
+     */
+    updateFontSize(size) {
+        const textConfig = {
+            fontSize: `${size}px`,
+            fontFamily: 'annie-use-your-telescope',
+            fill: '#FFFFFF',
+            align: 'right',
+        };
+
+        this.#highScoreText.setStyle(textConfig);
+        this.#currentScoreText.setStyle(textConfig);
+        this.#updateScorePosition();
     }
 }

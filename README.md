@@ -119,7 +119,10 @@ DinoRun/
 │   │   ├── scenes/       # Game scenes
 │   │   ├── objects/      # Game object classes
 │   │   ├── ui/           # UI components and overlays
-│   └── main.js           # Entry point & Game configuration
+│   │   └── config.js     # Game configuration
+│   ├── utils/
+│   │   └── helpers.js    # Utility functions
+│   └── main.js           # Entry point
 ├── index.html            # Main HTML file
 ├── vite.config.js        # Vite configuration
 └── package.json          # Project dependencies
@@ -130,7 +133,7 @@ DinoRun/
 Want to learn how the game works? Start by looking at these files:
 
 1. First, check out `index.html` - it's like the game's skeleton
-2. Then look at `src/main.js` - it's the brain of our game!
+2. Then look at `src/main.js` and `src/game/config.js` - They're the entry point and config for our game
 3. Look at `src/game/objects/` - it handles all the game objects
 4. Check out `src/game/scenes/` - it controls our game scenes
 5. Try reading `src/game/ui/` to see how the UI works
