@@ -24,7 +24,7 @@ While this project is based on the Chrome Dino Run game core mechanics, it'll li
 The code is written with lots of helpful comments that explain what's happening in simple terms (like we're explaining it to a 5-year-old). You'll find hopefully easy-to-understand explanations throughout the code.
 
 Originally this project was using DOM based rendering (See branches), after getting to a point where we wanted to make the game more interactive and visually appealing, we decided to make the switch to a Canvas based rendering.
-During the rewrite to Canvas though I ended up playing around with Phaser.js seperately and ultimately decided to use it for the game engine with the built-in WebGL based rendering support for DinoRun.
+During the rewrite to Canvas though I ended up playing around with Phaser.js separately and ultimately decided to use it for the game engine with the built-in WebGL based rendering support for DinoRun.
 
 The move to Phaser.js was a big decision for us, but it allowed us to focus on the game logic and gameplay much more, rather than the game engine itself - which for the kids has made this project a lot more fun to work on.
 
