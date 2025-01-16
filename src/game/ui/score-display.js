@@ -36,7 +36,7 @@ export class ScoreDisplay {
         };
 
         // Create high score text
-        this.#highScoreText = scene.add.text(x, y, `Best: ${this.#highScore}`, textConfig)
+        this.#highScoreText = scene.add.text(x, y, `Best: ${this.#highScore}m`, textConfig)
             .setDepth(1000)
             .setScrollFactor(0)
             .setOrigin(1, 0); // Align to right edge
@@ -46,7 +46,7 @@ export class ScoreDisplay {
         this.#currentScoreText = scene.add.text(
             x - this.#highScoreText.width - padding,
             y,
-            'Score: 0',
+            'Score: 0m',
             textConfig,
         )
             .setDepth(1000)
@@ -90,12 +90,12 @@ export class ScoreDisplay {
      */
     addScore(points) {
         this.#currentScore += points;
-        this.#currentScoreText.setText(`Score: ${this.#currentScore}`);
+        this.#currentScoreText.setText(`Score: ${this.#currentScore}m`);
         this.#updateScorePosition(); // Update position as current score width may change
 
         if (this.#currentScore > this.#highScore) {
             this.#highScore = this.#currentScore;
-            this.#highScoreText.setText(`Best: ${this.#highScore}`);
+            this.#highScoreText.setText(`Best: ${this.#highScore}m`);
             this.#saveHighScore();
         }
     }
@@ -123,7 +123,7 @@ export class ScoreDisplay {
      */
     reset() {
         this.#currentScore = 0;
-        this.#currentScoreText.setText(`Score: ${this.#currentScore}`);
+        this.#currentScoreText.setText(`Score: ${this.#currentScore}m`);
     }
 
     /**
