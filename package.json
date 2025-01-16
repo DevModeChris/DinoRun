@@ -6,10 +6,12 @@
     "type": "module",
     "scripts": {
         "start-server": "vite --config vite/config.dev.js",
-        "build": "vite build --config vite/config.prod.js",
+        "build": "node --experimental-specifier-resolution=node scripts/version-script.js && vite build --config vite/config.prod.js",
         "preview": "vite preview --config vite/config.dev.js",
         "lint": "eslint .",
-        "lint:fix": "eslint . --fix"
+        "lint:fix": "eslint . --fix",
+        "update-version": "node --experimental-specifier-resolution=node scripts/version-script.js",
+        "pipeline-build": "vite build --config vite/config.prod.js"
     },
     "dependencies": {
         "phaser": "^3.87.0"
@@ -17,6 +19,7 @@
     "devDependencies": {
         "eslint": "^8.56.0",
         "eslint-plugin-jsdoc": "^50.5.0",
+        "inquirer": "^9.2.12",
         "vite": "^5.4.11",
         "vite-plugin-static-copy": "^2.2.0"
     }

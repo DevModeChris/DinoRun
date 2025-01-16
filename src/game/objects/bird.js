@@ -21,6 +21,9 @@ export class Bird extends Phaser.GameObjects.Sprite {
     /** @type {number[]} */
     static SPAWN_HEIGHTS = [120, 130, 140, 150, 200, 220, 240, 250]; // Heights above ground level
 
+    /** @type {number} */
+    #originalVelocityX;
+
     /**
      * Creates a new bird enemy! 🦅
      *
@@ -69,6 +72,8 @@ export class Bird extends Phaser.GameObjects.Sprite {
             callbackScope: this,
             loop: true,
         });
+
+        this.#originalVelocityX = 0;
     }
 
     /**
@@ -78,6 +83,23 @@ export class Bird extends Phaser.GameObjects.Sprite {
         if (this.x < -Bird.WIDTH) {
             this.destroy();
         }
+    }
+
+    /**
+     * Pause bird animations and movement
+     */
+    pause() {
+        this.anims.pause();
+        this.#originalVelocityX = this.body.velocity.x;
+        this.body.setVelocityX(0);
+    }
+
+    /**
+     * Resume bird animations and movement
+     */
+    resume() {
+        this.anims.resume();
+        this.body.setVelocityX(this.#originalVelocityX);
     }
 
     /**

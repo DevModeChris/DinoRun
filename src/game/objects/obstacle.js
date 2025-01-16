@@ -9,20 +9,24 @@ export class Obstacle extends Phaser.GameObjects.Sprite {
     /** @type {number} */
     #scrollSpeed;
 
+    /** @type {number} */
+    #originalVelocityX;
+
     /**
      * Creates a new obstacle for our dino to dodge
      *
      * @param {Phaser.Scene} scene - The game scene where this obstacle lives
      * @param {number} x - How far from the left to place the obstacle
      * @param {number} y - How far from the top to place the obstacle
-     * @param {string} textureKey - The key of the sprite sheet containing obstacle images
-     * @param {string} frameKey - Which obstacle style to use from the sprite sheet
+     * @param {string} texture - The key of the sprite sheet containing obstacle images
+     * @param {string} frame - Which obstacle style to use from the sprite sheet
      * @param {number} scrollSpeed - How fast the obstacle moves left (matches ground speed)
      */
-    constructor(scene, x, y, textureKey, frameKey, scrollSpeed) {
-        super(scene, x, y, textureKey, frameKey);
+    constructor(scene, x, y, texture, frame, scrollSpeed) {
+        super(scene, x, y, texture, frame);
 
         this.#scrollSpeed = scrollSpeed;
+        this.#originalVelocityX = 0;
 
         // Set depth above sky,stars,etc but below lighting and ui
         this.setDepth(200);
@@ -61,6 +65,21 @@ export class Obstacle extends Phaser.GameObjects.Sprite {
             this.body.position.x = centerX + offsetX;
             this.body.position.y = centerY + offsetY;
         }
+    }
+
+    /**
+     * Pause obstacle movement
+     */
+    pause() {
+        this.#originalVelocityX = this.body.velocity.x;
+        this.body.setVelocityX(0);
+    }
+
+    /**
+     * Resume obstacle movement
+     */
+    resume() {
+        this.body.setVelocityX(this.#originalVelocityX);
     }
 
     /**

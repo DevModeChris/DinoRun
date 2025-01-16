@@ -13,6 +13,27 @@
 			"trimmed": false,
 			"spriteSourceSize": { "x": 0, "y": 0, "w": 56, "h": 56 },
 			"sourceSize": { "w": 56, "h": 56 }
+		},
+		"pauseBtn": {
+			"frame":{ "x": 57, "y": 57, "w": 40, "h": 40 },
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": { "x": 0, "y": 0, "w": 40, "h": 40 },
+			"sourceSize": { "w": 40, "h": 40 }
+		},
+		"exitFullscreenBtn": {
+			"frame":{ "x": 57, "y": 0, "w": 40, "h": 40 },
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": { "x": 0, "y": 0, "w": 40, "h": 40 },
+			"sourceSize": { "w": 40, "h": 40 }
+		},
+		"fullscreenBtn": {
+			"frame":{ "x": 0, "y": 114, "w": 40, "h": 40 },
+			"rotated": false,
+			"trimmed": false,
+			"spriteSourceSize": { "x": 0, "y": 0, "w": 40, "h": 40 },
+			"sourceSize": { "w": 40, "h": 40 }
 		}
 	},
 	"meta":{
@@ -20,7 +41,7 @@
 		"version": "1.0",
 		"image": "ui-elements.png",
 		"format": "RGBA8888",
-		"size":{ "w": 56, "h": 113 },
+		"size":{ "w": 97, "h": 154 },
 		"scale": "1"
 	}
 }

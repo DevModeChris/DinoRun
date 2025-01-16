@@ -13,6 +13,7 @@ import { SkySystem } from '../objects/sky-system.js';
 import { ScoreDisplay } from '../ui/score-display.js';
 import { DifficultyManager } from '../systems/difficulty-manager.js';
 import { checkIfMobile } from '../../utils/helpers.js';
+import { gameConfig } from '../config.js';
 
 export class GameScene extends Phaser.Scene {
     /** @type {number} */
@@ -20,6 +21,9 @@ export class GameScene extends Phaser.Scene {
 
     /** @type {boolean} */
     #isGameOver = false;
+
+    /** @type {boolean} */
+    #isPaused = false;
 
     /** @type {Ground} */
     #ground;
@@ -80,6 +84,24 @@ export class GameScene extends Phaser.Scene {
 
     /** @type {boolean} */
     #isMobile = false;
+
+    /** @type {Phaser.GameObjects.Sprite} */
+    #pauseButton;
+
+    /** @type {Phaser.GameObjects.Container} */
+    #pauseOverlay;
+
+    /** @type {Phaser.Input.Keyboard.Key} */
+    #pauseKey;
+
+    /** @type {boolean} */
+    #pauseKeyPressed = false;
+
+    /** @type {Phaser.GameObjects.Sprite} */
+    #fullscreenButton;
+
+    /** @type {boolean} */
+    #isFullscreen = false;
 
     constructor() {
         super('GameScene');
@@ -167,6 +189,7 @@ export class GameScene extends Phaser.Scene {
     create() {
         // Reset game state
         this.#isGameOver = false;
+        this.#isPaused = false;
         this.physics.resume();
 
         // Detect if we're on a mobile device
@@ -226,6 +249,10 @@ export class GameScene extends Phaser.Scene {
         // Create debug text (hidden by default)
         this.#createDebugText();
 
+        // Create buttons UI
+        this.#createButtonsUI();
+        this.#createPauseOverlay();
+
         // Listen for resize events
         this.scale.on('resize', this.resize, this);
 
@@ -239,8 +266,9 @@ export class GameScene extends Phaser.Scene {
         );
 
         // Set up debug controls
-        const keys = this.input.keyboard.addKeys('TAB');
+        const keys = this.input.keyboard.addKeys('TAB,P');
         this.#debugKey = keys.TAB;
+        this.#pauseKey = keys.P;
 
         // Enable debug mode to see collision boxes
         this.physics.world.createDebugGraphic();
@@ -267,8 +295,8 @@ export class GameScene extends Phaser.Scene {
         const padding = 4;
         const buffer = 4;
 
-        // Create text first to measure it
-        this.#debugText = this.add.text(16, 16, '🕒 Time: 24:00', {  // Maximum length text
+        // Create debug text with default styling
+        this.#debugText = this.add.text(16, 76, '', {
             fontFamily: 'monospace',
             fontSize: '13px',
             fill: '#ffffff',
@@ -281,16 +309,12 @@ export class GameScene extends Phaser.Scene {
             .setVisible(false)
             .setPipeline('TextureTintPipeline');  // Use pixel art pipeline
 
-        // Get maximum width from initial text
-        const maxWidth = this.#debugText.width;
-        const maxHeight = this.#debugText.height;
-
-        // Create background sized to maximum text width
-        const background = this.add.rectangle(
+        // Create background for dynamic sizing
+        this.#debugText.background = this.add.rectangle(
             16 - padding - buffer,
-            16 - padding - buffer,
-            maxWidth + (padding * 2) + (buffer * 2),
-            maxHeight + (padding * 2) + (buffer * 2),
+            76 - padding - buffer,
+            0,  // Initial width will be set dynamically
+            0,  // Initial height will be set dynamically
             0x000000,
             0.7,
         )
@@ -299,11 +323,11 @@ export class GameScene extends Phaser.Scene {
             .setDepth(999)
             .setVisible(false);
 
-        // Store background reference for visibility toggling
-        this.#debugText.background = background;
-
-        // Clear the initial measuring text
-        this.#debugText.setText('');
+        // Add a method to dynamically resize the background
+        this.#debugText.resizeBackground = () => {
+            this.#debugText.background.width = this.#debugText.width + (padding * 2) + (buffer * 2);
+            this.#debugText.background.height = this.#debugText.height + (padding * 2) + (buffer * 2);
+        };
     }
 
     /**
@@ -332,6 +356,173 @@ export class GameScene extends Phaser.Scene {
             .setScrollFactor(0)
             .setDepth(1000)
             .setVisible(false);  // Start hidden
+    }
+
+    /**
+     * Creates in-game menu UI elements
+     */
+    #createButtonsUI() {
+        const buttonAlpha = 0.5; // 50% opacity
+        const padding = 16 * this.#scaleFactor;
+
+        // Create pause button in top left with padding
+        this.#pauseButton = this.add.sprite(padding, padding, 'ui-elements-sprites', 'pauseBtn')
+            .setScrollFactor(0)
+            .setDepth(1000)
+            .setOrigin(0, 0)
+            .setAlpha(buttonAlpha)
+            .setInteractive({ useHandCursor: true })
+            .on('pointerdown', () => this.#togglePause());
+
+        // Create fullscreen button next to pause button
+        this.#fullscreenButton = this.add.sprite(0, padding, 'ui-elements-sprites', 'fullscreenBtn')
+            .setScrollFactor(0)
+            .setDepth(1000)
+            .setOrigin(0, 0)
+            .setAlpha(buttonAlpha)
+            .setInteractive({ useHandCursor: true })
+            .on('pointerdown', () => this.#toggleFullscreen());
+
+        // Position buttons
+        this.#updateButtonPositions();
+    }
+
+    /**
+     * Updates UI button positions based on screen orientation
+     */
+    #updateButtonPositions() {
+        if (!this.#fullscreenButton || !this.#pauseButton) {
+            return;
+        }
+
+        const padding = 16;
+        const buttonWidth = 40;
+        const buttonSpacing = 10;
+
+        // Place buttons side by side with orientation-specific spacing
+        this.#pauseButton.setPosition(padding, padding);
+        this.#fullscreenButton.setPosition(padding + buttonWidth + buttonSpacing, padding);
+    }
+
+    /**
+     * Updates fullscreen button frame based on screen state
+     */
+    #updateFullscreenButton() {
+        if (!this.#fullscreenButton) {
+            return;
+        }
+
+        // Update sprite frame based on fullscreen state
+        const frame = this.#isFullscreen ? 'exitFullscreenBtn' : 'fullscreenBtn';
+        this.#fullscreenButton.setFrame(frame);
+    }
+
+    /**
+     * Creates the pause overlay with resume button and version info
+     */
+    #createPauseOverlay() {
+        // Create a container for pause elements
+        this.#pauseOverlay = this.add.container(0, 0)
+            .setScrollFactor(0)
+            .setDepth(1001)
+            .setVisible(false);
+
+        const { width, height } = this.scale;
+
+        // Semi-transparent background
+        const background = this.add.rectangle(0, 0, width, height, 0x000000, 0.7)
+            .setOrigin(0, 0)
+            .setInteractive(); // Make background interactive to block input
+
+        // Resume button with text
+        const resumeButton = this.add.text(width / 2, height / 2, 'Resume', {
+            fontFamily: 'monospace',
+            fontSize: `${Math.round(48 * this.#scaleFactor)}px`,
+            fill: '#ffffff',
+            backgroundColor: '#222222',
+            padding: { x: 20, y: 10 },
+        })
+            .setOrigin(0.5)
+            .setInteractive()  // Enable hit area for the text
+            .on('pointerup', () => {
+                this.#togglePause();
+            });
+
+        // Calculate spacing based on orientation
+        const isPortrait = height > width;
+        const versionSpacing = isPortrait ? 120 : 60;
+
+        // Version text
+        const versionText = this.add.text(width / 2, (height / 2) + versionSpacing, `Version: ${gameConfig.version}`, {
+            fontFamily: 'monospace',
+            fontSize: `${Math.round(isPortrait ? 22 : 24 * this.#scaleFactor)}px`,
+            fill: '#ffffff',
+        }).setOrigin(0.5);
+
+        // Add all elements to the container
+        this.#pauseOverlay.add([background, resumeButton, versionText]);
+    }
+
+    /**
+     * Toggles the game pause state
+     */
+    #togglePause() {
+        this.#isPaused = !this.#isPaused;
+
+        if (this.#isPaused) {
+            this.physics.pause();
+            this.#pauseOverlay.setVisible(true);
+
+            // Pause dino
+            this.#dino.pause();
+
+            // Pause ground scrolling
+            this.#ground.setScrollSpeed(0);
+
+            // Pause all enemies
+            this.#enemies.getChildren().forEach((enemy) => {
+                enemy.pause();
+            });
+        }
+        else {
+            this.physics.resume();
+            this.#pauseOverlay.setVisible(false);
+
+            // Resume dino
+            this.#dino.resume();
+
+            // Resume ground scrolling with current difficulty speed
+            this.#ground.setScrollSpeed(this.#difficultyManager.getCurrentSpeed());
+
+            // Resume all enemies
+            this.#enemies.getChildren().forEach((enemy) => {
+                enemy.resume();
+            });
+        }
+    }
+
+    /**
+     * Toggles fullscreen mode
+     */
+    #toggleFullscreen() {
+        try {
+            if (!this.#isFullscreen) {
+                if (!document.fullscreenElement) {
+                    this.scale.startFullscreen();
+                }
+            }
+            else {
+                if (document.fullscreenElement) {
+                    this.scale.stopFullscreen();
+                }
+            }
+
+            this.#isFullscreen = !this.#isFullscreen;
+            this.#updateFullscreenButton();
+        }
+        catch (error) {
+            console.warn('Fullscreen request failed:', error);
+        }
     }
 
     /**
@@ -390,6 +581,32 @@ export class GameScene extends Phaser.Scene {
                 enemy.y = this.#groundY;
             }
         });
+
+        // Update UI button positions
+        this.#updateButtonPositions();
+
+        // Update pause overlay if it exists
+        if (this.#pauseOverlay) {
+            const { width, height } = gameSize;
+
+            // Update background
+            const background = this.#pauseOverlay.list[0];
+            background.setSize(width, height);
+
+            // Update resume button
+            const resumeButton = this.#pauseOverlay.list[1];
+            resumeButton
+                .setPosition(width / 2, height / 2)
+                .setStyle({ fontSize: `${Math.round(48 * this.#scaleFactor)}px` });
+
+            // Update version text
+            const versionText = this.#pauseOverlay.list[2];
+            const isPortrait = height > width;
+            const versionSpacing = isPortrait ? 120 : 60;
+            versionText
+                .setPosition(width / 2, (height / 2) + versionSpacing)
+                .setStyle({ fontSize: `${Math.round(isPortrait ? 22 : 24 * this.#scaleFactor)}px` });
+        }
     }
 
     /**
@@ -402,7 +619,7 @@ export class GameScene extends Phaser.Scene {
      */
     #startSpawning(type, spawnFunc, minDelay, maxDelay) {
         const spawn = () => {
-            if (this.#isGameOver) {
+            if (this.#isGameOver || this.#isPaused) {
                 return;
             }
 
@@ -441,7 +658,7 @@ export class GameScene extends Phaser.Scene {
      * @returns {Bird} The spawned bird
      */
     #spawnBird() {
-        if (this.#isGameOver) {
+        if (this.#isGameOver || this.#isPaused) {
             return null;
         }
 
@@ -467,7 +684,7 @@ export class GameScene extends Phaser.Scene {
      * @returns {SmallRock} The spawned rock
      */
     #spawnRock() {
-        if (this.#isGameOver) {
+        if (this.#isGameOver || this.#isPaused) {
             return null;
         }
 
@@ -486,7 +703,22 @@ export class GameScene extends Phaser.Scene {
      * @param {number} delta - The time in milliseconds since the last update
      */
     update(time, delta) {
+        // Don't update game objects if game over
         if (this.#isGameOver) {
+            return;
+        }
+
+        // Always check pause key regardless of game state
+        if (this.#pauseKey.isDown && !this.#pauseKeyPressed) {
+            this.#pauseKeyPressed = true;
+            this.#togglePause();
+        }
+        else if (!this.#pauseKey.isDown) {
+            this.#pauseKeyPressed = false;
+        }
+
+        // Don't update game objects if paused
+        if (this.#isPaused) {
             return;
         }
 
@@ -502,6 +734,7 @@ export class GameScene extends Phaser.Scene {
             const hours = Math.floor(timeOfDay * 24);
             const minutes = Math.floor((timeOfDay * 24 * 60) % 60);
             this.#debugText.setText(`🕒 Time: ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`);
+            this.#debugText.resizeBackground();
             this.#debugText.setVisible(true);
             this.#debugText.background.setVisible(true);
         }

@@ -175,19 +175,19 @@ export class Dino extends Phaser.GameObjects.Sprite {
      * Like rearranging furniture in a room! 🏠
      */
     #updateMobileControlPositions() {
-        if (!this.#isMobile) {
+        if (!this.#isMobile || !this.scene) {
             return;
         }
 
-        const { width, height } = this.scene.scale;
+        const gameSize = this.scene.scale.gameSize;
         const padding = 20;
 
         if (this.#jumpButton) {
-            this.#jumpButton.setPosition(padding, height - padding);
+            this.#jumpButton.setPosition(padding, gameSize.height - padding);
         }
 
         if (this.#duckButton) {
-            this.#duckButton.setPosition(width - padding, height - padding);
+            this.#duckButton.setPosition(gameSize.width - padding, gameSize.height - padding);
         }
     }
 
@@ -443,5 +443,21 @@ export class Dino extends Phaser.GameObjects.Sprite {
                 Dino.HEIGHT - Dino.STANDING_HITBOX_HEIGHT,
             );
         }
+    }
+
+    /**
+     * Pause dino animations and movement
+     */
+    pause() {
+        this.anims.pause();
+        this.body.setVelocityX(0);
+        this.body.setVelocityY(0);
+    }
+
+    /**
+     * Resume dino animations and movement
+     */
+    resume() {
+        this.anims.resume();
     }
 }
