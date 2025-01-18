@@ -15,9 +15,9 @@ function generateVersion(versionOptions) {
     const { major, minor, patch } = versionOptions;
 
     // Create a date string that shows exactly when we built the game
-    const dateString = `${now.getDate()}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getFullYear()}`;
+    const dateString = `${now.getDate()}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getFullYear().toString().slice(-2)}`;
 
-    return `${major}.${minor}.${patch}-b${dateString}`;
+    return `${major}.${minor}.${patch} (${dateString})`;
 }
 
 /**
