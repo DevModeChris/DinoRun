@@ -1,10 +1,9 @@
 /**
- * The ScoreDisplay shows your points in the game!
+ * The ScoreManager manages and shows your points in the game!
  *
- * Think of it like a magical scoreboard that keeps track of how well
- * you're doing and remembers your best score ever!
+ * It keeps track of how well you're doing and remembers your best score ever!
  */
-export class ScoreDisplay {
+export class ScoreManager {
     /** @type {number} */
     #currentScore = 0;
 

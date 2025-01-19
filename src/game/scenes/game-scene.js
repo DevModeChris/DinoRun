@@ -10,7 +10,7 @@ import { Dino } from '../objects/dino.js';
 import { Bird } from '../objects/bird.js';
 import { SmallRock } from '../objects/small-rock.js';
 import { SkySystem } from '../objects/sky-system.js';
-import { ScoreDisplay } from '../ui/score-display.js';
+import { ScoreManager } from '../systems/score-manager.js';
 import { DifficultyManager } from '../systems/difficulty-manager.js';
 import { checkIfMobile } from '../../utils/helpers.js';
 import {
@@ -35,8 +35,8 @@ export class GameScene extends Phaser.Scene {
     /** @type {SkySystem} */
     #skySystem;
 
-    /** @type {ScoreDisplay} */
-    #scoreDisplay;
+    /** @type {ScoreManager} */
+    #scoreManager;
 
     /** @type {DifficultyManager} */
     #difficultyManager;
@@ -49,6 +49,9 @@ export class GameScene extends Phaser.Scene {
 
     /** @type {Map<string, Phaser.Time.TimerEvent>} */
     #spawnTimers = new Map();
+
+    /** @type {Object.<string, number>} */
+    #lastSpawnTimes = {};
 
     /** @type {Phaser.GameObjects.Text} */
     #debugText;
@@ -158,23 +161,35 @@ export class GameScene extends Phaser.Scene {
         // Create a group for all enemies
         this.#enemies = this.add.group();
 
-        // Start spawning enemies with initial delay
-        this.time.delayedCall(1000, () => {
-            // Add randomness to initial spawn delays
-            const initialBirdDelay = Phaser.Math.Between(0, 1000);
-            const initialRockDelay = Phaser.Math.Between(0, 1000);
+        // Start spawning enemies with randomized initial setup
+        this.time.delayedCall(2000, () => {
+            // Randomly choose which enemy type spawns first
+            const spawnFirst = Math.random() < 0.5 ? 'bird' : 'rock';
 
-            this.time.delayedCall(initialBirdDelay, () => {
-                this.#startSpawning('bird', () => this.#spawnBird(), 3000, 8000);
-            });
+            // Randomise initial delays (2-5 seconds for first enemy, 4-7 seconds for second)
+            const firstDelay = Phaser.Math.Between(0, 1000);
+            const secondDelay = Phaser.Math.Between(2000, 4000);
 
-            this.time.delayedCall(initialRockDelay, () => {
-                this.#startSpawning('rock', () => this.#spawnRock(), 1500, 4000);
-            });
+            if (spawnFirst === 'bird') {
+                this.time.delayedCall(firstDelay, () => {
+                    this.#startSpawning('bird', () => this.#spawnBird(), 3000, 8000);
+                });
+                this.time.delayedCall(secondDelay, () => {
+                    this.#startSpawning('rock', () => this.#spawnRock(), 1500, 4000);
+                });
+            }
+            else {
+                this.time.delayedCall(firstDelay, () => {
+                    this.#startSpawning('rock', () => this.#spawnRock(), 1500, 4000);
+                });
+                this.time.delayedCall(secondDelay, () => {
+                    this.#startSpawning('bird', () => this.#spawnBird(), 3000, 8000);
+                });
+            }
         });
 
         // Initialise score display
-        this.#scoreDisplay = new ScoreDisplay(this, 0, 0);
+        this.#scoreManager = new ScoreManager(this, 0, 0);
 
         // Create game over text (hidden initially)
         this.#createGameOverText();
@@ -350,8 +365,8 @@ export class GameScene extends Phaser.Scene {
         const scaledPadding = basePadding * scale;
 
         // Position score display at top-right corner
-        if (this.#scoreDisplay) {
-            this.#scoreDisplay.updatePosition(width - basePadding, basePadding, scale);
+        if (this.#scoreManager) {
+            this.#scoreManager.updatePosition(width - basePadding, basePadding, scale);
         }
 
         // Position pause button in top left with padding
@@ -582,6 +597,12 @@ export class GameScene extends Phaser.Scene {
                 enemy.pause();
             });
 
+            // Clear all spawn timers
+            for (const timer of this.#spawnTimers.values()) {
+                timer.destroy();
+            }
+            this.#spawnTimers.clear();
+
             // Hide in-game UI elements
             if (this.#pauseButton) {
                 this.#pauseButton.setVisible(false);
@@ -604,6 +625,22 @@ export class GameScene extends Phaser.Scene {
             this.#enemies.getChildren().forEach((enemy) => {
                 enemy.resume();
             });
+
+            // Only restart spawning if we don't have any active spawn timers
+            if (this.#spawnTimers.size === 0) {
+                // Use the last spawn times to maintain proper spacing
+                const currentTime = this.time.now;
+                const birdDelay = Math.max(0, 3000 - (currentTime - (this.#lastSpawnTimes['bird'] || 0)));
+                const rockDelay = Math.max(0, 1500 - (currentTime - (this.#lastSpawnTimes['rock'] || 0)));
+
+                this.time.delayedCall(birdDelay, () => {
+                    this.#startSpawning('bird', () => this.#spawnBird(), 3000, 8000);
+                });
+
+                this.time.delayedCall(rockDelay, () => {
+                    this.#startSpawning('rock', () => this.#spawnRock(), 1500, 4000);
+                });
+            }
 
             // Show in-game UI elements
             if (this.#pauseButton) {
@@ -660,10 +697,29 @@ export class GameScene extends Phaser.Scene {
                 return;
             }
 
+            const currentTime = this.time.now;
+            const lastSpawnTime = this.#lastSpawnTimes[type] || 0;
+            const timeSinceLastSpawn = currentTime - lastSpawnTime;
+
+            // Ensure minimum spacing between enemies of the same type
+            if (timeSinceLastSpawn < minDelay) {
+                // Schedule next check after remaining time
+                const remainingDelay = minDelay - timeSinceLastSpawn;
+                const timer = this.time.addEvent({
+                    delay: remainingDelay,
+                    callback: spawn,
+                    callbackScope: this,
+                });
+                this.#spawnTimers.set(type, timer);
+
+                return;
+            }
+
             // Spawn the enemy
             const enemy = spawnFunc();
             if (enemy) {
                 this.#enemies.add(enemy);
+                this.#lastSpawnTimes[type] = currentTime;
 
                 // Add collision with dino
                 this.physics.add.overlap(
@@ -796,11 +852,11 @@ export class GameScene extends Phaser.Scene {
 
         // Update score based on time survived
         if (time - this.#lastScoreUpdate >= this.#scoreUpdateInterval) {
-            this.#scoreDisplay.addScore(1);
+            this.#scoreManager.addScore(1);
             this.#lastScoreUpdate = time;
 
             // Update difficulty based on score
-            if (this.#difficultyManager.update(this.#scoreDisplay.getCurrentScore())) {
+            if (this.#difficultyManager.update(this.#scoreManager.getCurrentScore())) {
                 // Speed up ground scrolling
                 this.#ground.setScrollSpeed(this.#difficultyManager.getCurrentSpeed());
 
@@ -918,8 +974,8 @@ export class GameScene extends Phaser.Scene {
         this.#cleanup();
 
         // Get final scores before resetting
-        const finalScore = this.#scoreDisplay.getCurrentScore();
-        const highScore = this.#scoreDisplay.getHighScore();
+        const finalScore = this.#scoreManager.getCurrentScore();
+        const highScore = this.#scoreManager.getHighScore();
         const beatHighScore = finalScore >= highScore && finalScore > 0;
 
         // Clear any existing game over text
@@ -1062,11 +1118,11 @@ export class GameScene extends Phaser.Scene {
         // Hide in-game UI elements
         this.#pauseButton.setVisible(false);
         this.#fullscreenButton.setVisible(false);
-        this.#scoreDisplay.toggleScoreTextVisibility();
+        this.#scoreManager.toggleScoreTextVisibility();
         this.#dino.toggleButtonVisibility();
 
         // Now reset the score and difficulty for the next game
-        this.#scoreDisplay.reset();
+        this.#scoreManager.reset();
         this.#difficultyManager.reset();
 
         // Listen for restart input
