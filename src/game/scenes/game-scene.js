@@ -234,6 +234,135 @@ export class GameScene extends Phaser.Scene {
     }
 
     /**
+     * Creates a menu button with consistent styling
+     *
+     * @param {string} text - The button text
+     * @param {number} width - Fixed width for the button
+     * @returns {Phaser.GameObjects.Text} The created button
+     */
+    #createMenuButton(text, width) {
+        const button = this.add.text(
+            0,
+            0,
+            text,
+            {
+                fontFamily: 'annie-use-your-telescope',
+                fontSize: '32px',
+                color: '#ffffff',
+                align: 'center',
+                backgroundColor: '#222222',
+                padding: { x: 20, y: 10 },
+                fixedWidth: width,
+            },
+        )
+            .setOrigin(0.5)
+            .setInteractive({ useHandCursor: true });
+
+        return button;
+    }
+
+    /**
+     * Creates the pause overlay with resume button and version info
+     */
+    #createPauseOverlay() {
+        const { width, height } = this.scale;
+
+        // Create a semi-transparent black overlay
+        this.#pauseOverlay = this.add.container(0, 0)
+            .setScrollFactor(0)
+            .setDepth(900)
+            .setVisible(false);
+
+        // Add semi-transparent background
+        const background = this.add.rectangle(
+            0,
+            0,
+            width,
+            height,
+            0x000000,
+            0.5,
+        )
+            .setOrigin(0, 0)
+            .setInteractive(); // Block input when paused
+
+        // Add PAUSED header text
+        this.#pauseHeader = this.add.text(
+            0,
+            0,
+            'PAUSED',
+            {
+                fontFamily: 'annie-use-your-telescope',
+                fontSize: '52px',
+                color: '#ffffff',
+                align: 'center',
+            },
+        )
+            .setOrigin(0.5);
+
+        // Create temporary buttons to measure their widths
+        const tempContinue = this.add.text(
+            0,
+            0,
+            'Continue',
+            {
+                fontFamily: 'annie-use-your-telescope',
+                fontSize: '32px',
+                padding: { x: 20, y: 10 },
+            },
+        );
+
+        const tempRestart = this.add.text(
+            0,
+            0,
+            'Restart',
+            {
+                fontFamily: 'annie-use-your-telescope',
+                fontSize: '32px',
+                padding: { x: 20, y: 10 },
+            },
+        );
+
+        // Calculate the maximum width needed
+        const maxButtonWidth = Math.max(tempContinue.width, tempRestart.width);
+
+        // Destroy temporary text objects
+        tempContinue.destroy();
+        tempRestart.destroy();
+
+        // Create the actual buttons with consistent width
+        const continueButton = this.#createMenuButton('Continue', maxButtonWidth);
+        continueButton.on('pointerup', () => {
+            this.#togglePause();
+        });
+
+        const restartButton = this.#createMenuButton('Restart', maxButtonWidth);
+        restartButton.on('pointerup', () => {
+            this.#restartGame();
+        });
+
+        // Version text
+        const versionText = this.add.text(
+            0,
+            0,
+            `Version: ${gameConfig.version}`,
+            {
+                fontFamily: 'annie-use-your-telescope',
+                fontSize: '24px',
+                color: '#ffffff',
+            },
+        ).setOrigin(0.5);
+
+        // Add all elements to the container
+        this.#pauseOverlay.add([
+            background,
+            this.#pauseHeader,
+            continueButton,
+            restartButton,
+            versionText,
+        ]);
+    }
+
+    /**
      * Handle scene resizing
      *
      * @param {number} width - New game width
@@ -391,6 +520,8 @@ export class GameScene extends Phaser.Scene {
 
         // Update pause overlay if it exists
         if (this.#pauseOverlay) {
+            const pauseMenuButtonPadding = 10;
+
             // Update background
             const background = this.#pauseOverlay.list[0];
             background.setSize(width, height);
@@ -403,8 +534,12 @@ export class GameScene extends Phaser.Scene {
             const continueButton = this.#pauseOverlay.list[2];
             continueButton.setPosition(width / 2, height * 0.45);
 
+            // Update restart button
+            const restartButton = this.#pauseOverlay.list[3];
+            restartButton.setPosition(width / 2, (height * 0.55) + pauseMenuButtonPadding);
+
             // Update version text
-            const versionText = this.#pauseOverlay.list[3];
+            const versionText = this.#pauseOverlay.list[4];
             versionText.setPosition(width / 2, height - 30);
 
             // Center the pause menu
@@ -488,85 +623,6 @@ export class GameScene extends Phaser.Scene {
             .setAlpha(buttonAlpha)
             .setInteractive({ useHandCursor: true })
             .on('pointerup', () => this.#toggleFullscreen());
-    }
-
-    /**
-     * Creates the pause overlay with resume button and version info
-     */
-    #createPauseOverlay() {
-        const { width, height } = this.scale;
-
-        // Create a semi-transparent black overlay
-        this.#pauseOverlay = this.add.container(0, 0)
-            .setScrollFactor(0)
-            .setDepth(900)
-            .setVisible(false);
-
-        // Add semi-transparent background
-        const background = this.add.rectangle(
-            0,
-            0,
-            width,
-            height,
-            0x000000,
-            0.5,
-        )
-            .setOrigin(0, 0)
-            .setInteractive(); // Block input when paused
-
-        // Add PAUSED header text
-        this.#pauseHeader = this.add.text(
-            0,
-            0,
-            'PAUSED',
-            {
-                fontFamily: 'annie-use-your-telescope',
-                fontSize: '52px',
-                color: '#ffffff',
-                align: 'center',
-            },
-        )
-            .setOrigin(0.5);
-
-        // Create continue button
-        const continueButton = this.add.text(
-            0,
-            0,
-            'Continue',
-            {
-                fontFamily: 'annie-use-your-telescope',
-                fontSize: '32px',
-                color: '#ffffff',
-                align: 'center',
-                backgroundColor: '#222222',
-                padding: { x: 20, y: 10 },
-            },
-        )
-            .setOrigin(0.5)
-            .setInteractive({ useHandCursor: true })
-            .on('pointerup', () => {
-                this.#togglePause();
-            });
-
-        // Version text
-        const versionText = this.add.text(
-            0,
-            0,
-            `Version: ${gameConfig.version}`,
-            {
-                fontFamily: 'annie-use-your-telescope',
-                fontSize: '24px',
-                color: '#ffffff',
-            },
-        ).setOrigin(0.5);
-
-        // Add all elements to the container
-        this.#pauseOverlay.add([
-            background,
-            this.#pauseHeader,
-            continueButton,
-            versionText,
-        ]);
     }
 
     /**
@@ -1144,6 +1200,9 @@ export class GameScene extends Phaser.Scene {
      * Restarts the game after game over
      */
     #restartGame() {
+        // Clean up any active timers and events
+        this.#cleanup();
+
         // Clean up existing objects
         if (this.#gameOverText) {
             this.#gameOverText.destroy();
@@ -1153,7 +1212,6 @@ export class GameScene extends Phaser.Scene {
         // Reset game state
         this.#isGameOver = false;
         this.#isPaused = false;
-        this.#spawnTimers.clear();
         this.physics.resume();
 
         // Restart the scene
