@@ -13,12 +13,13 @@ import { SkySystem } from '../objects/sky-system.js';
 import { ScoreDisplay } from '../ui/score-display.js';
 import { DifficultyManager } from '../systems/difficulty-manager.js';
 import { checkIfMobile } from '../../utils/helpers.js';
-import { gameConfig } from '../config.js';
+import {
+    gameConfig,
+    BASE_WIDTH,
+    BASE_HEIGHT,
+} from '../config.js';
 
 export class GameScene extends Phaser.Scene {
-    /** @type {number} */
-    #groundCollisionHeight = 40; // Height of the collision area (not the full sprite height)
-
     /** @type {boolean} */
     #isGameOver = false;
 
@@ -68,16 +69,13 @@ export class GameScene extends Phaser.Scene {
     #scoreUpdateInterval = 100; // Update score every 100ms
 
     /** @type {number} */
-    #baseHeight = 720; // Base height for scaling calculations
-
-    /** @type {number} */
     #dinoX = 100;
 
     /** @type {number} */
     #groundY = 0;
 
     /** @type {number} */
-    #scaleFactor = 1;
+    #groundCollisionHeight = Ground.COLLISION_HEIGHT;
 
     /** @type {Phaser.GameObjects.Text} */
     #gameOverText;
@@ -90,6 +88,9 @@ export class GameScene extends Phaser.Scene {
 
     /** @type {Phaser.GameObjects.Container} */
     #pauseOverlay;
+
+    /** @type {Phaser.GameObjects.Text} */
+    #pauseHeader;
 
     /** @type {Phaser.Input.Keyboard.Key} */
     #pauseKey;
@@ -117,144 +118,73 @@ export class GameScene extends Phaser.Scene {
         }
         this.#spawnTimers.clear();
 
-        // Remove the particle texture if it exists
-        if (this.textures.exists('particle')) {
-            this.textures.remove('particle');
+        // Destroy any active particle managers
+        const particleManagers = this.add.particles.list;
+        if (particleManagers) {
+            particleManagers.forEach((manager) => {
+                manager.destroy();
+            });
         }
-    }
-
-    preload() {
-        // Create a canvas for our particle system
-        const particleCanvas = document.createElement('canvas');
-        particleCanvas.width = 8;
-        particleCanvas.height = 8;
-        const ctx = particleCanvas.getContext('2d');
-
-        // Draw a simple circle
-        ctx.fillStyle = '#ffffff';
-        ctx.beginPath();
-        ctx.arc(4, 4, 3, 0, Math.PI * 2);
-        ctx.fill();
-
-        // Convert to base64 and load as texture
-        const base64 = particleCanvas.toDataURL();
-        this.textures.addBase64('particle', base64);
-
-        // Load font
-        this.load.font(
-            'annie-use-your-telescope',
-            'src/assets/fonts/AnnieUseYourTelescope-Regular.ttf',
-            'truetype',
-        );
-
-        // Load the UI elements spritesheet and its data
-        this.load.atlas(
-            'ui-elements-sprites',
-            'src/assets/sprites/ui-elements.png',
-            'src/assets/sprites/ui-elements.json',
-        );
-
-        // Load the ground spritesheet and its data
-        this.load.atlas(
-            'ground-sprites',
-            'src/assets/sprites/ground.png',
-            'src/assets/sprites/ground.json',
-        );
-
-        // Load the dino spritesheet and its data
-        this.load.atlas(
-            'dino-sprites',
-            'src/assets/sprites/dino.png',
-            'src/assets/sprites/dino.json',
-        );
-
-        // Load bird sprites
-        this.load.spritesheet(
-            'bird-sprites',
-            'src/assets/sprites/bird.png',
-            { frameWidth: 32, frameHeight: 32 },
-        );
-
-        // Load the small rock obstacles spritesheet and its data
-        this.load.atlas(
-            'obstacle-small-rocks-sprites',
-            'src/assets/sprites/sml-rocks.png',
-            'src/assets/sprites/sml-rocks.json',
-        );
     }
 
     /**
      * Creates all the game objects and sets up the game
      */
     create() {
-        // Reset game state
-        this.#isGameOver = false;
-        this.#isPaused = false;
-        this.physics.resume();
-
-        // Detect if we're on a mobile device
-        this.#isMobile = checkIfMobile();
-
         const { width, height } = this.scale;
 
-        // Calculate initial positions
-        this.#calculatePositions();
+        // Check if we're on mobile
+        this.#isMobile = checkIfMobile();
 
-        // Create our beautiful sky
+        // Create sky background
         this.#skySystem = new SkySystem(this);
 
-        // Create difficulty manager
-        this.#difficultyManager = new DifficultyManager();
+        // Create the visual scrolling ground
+        this.#ground = new Ground(this, 0, 'ground-sprites', 'purpleGrass');
 
         // Create the invisible platform for physics
-        this.#platform = this.add.rectangle(
-            width / 2,
-            this.#groundY + (this.#groundCollisionHeight / 2),
-            width,
-            this.#groundCollisionHeight,
-            0xFF0000,
-            0,
-        );
+        this.#platform = this.add.rectangle(0, 0, width, this.#groundCollisionHeight);
         this.physics.add.existing(this.#platform, true);
 
-        // Create the visual scrolling ground
-        this.#ground = new Ground(this, height - Ground.HEIGHT, 'ground-sprites', 'purpleGrass');
-        this.#ground.width = width;
-
-        // Create our dino character at fixed position
-        this.#dino = new Dino(this, this.#dinoX, this.#groundY - (this.#groundCollisionHeight / 2));
+        // Create dino at initial position
+        this.#dino = new Dino(this, 0, 0);
 
         // Make the dino collide with the platform
         this.physics.add.collider(this.#dino, this.#platform);
 
+        // Create difficulty manager
+        this.#difficultyManager = new DifficultyManager();
+
         // Create a group for all enemies
         this.#enemies = this.add.group();
 
-        // Start spawning enemies
-        this.#startSpawning('bird', () => this.#spawnBird(), 4000, 14000);
-        this.#startSpawning('rock', () => this.#spawnRock(), 1000, 7000);
+        // Start spawning enemies with initial delay
+        this.time.delayedCall(1000, () => {
+            // Add randomness to initial spawn delays
+            const initialBirdDelay = Phaser.Math.Between(0, 1000);
+            const initialRockDelay = Phaser.Math.Between(0, 1000);
+
+            this.time.delayedCall(initialBirdDelay, () => {
+                this.#startSpawning('bird', () => this.#spawnBird(), 3000, 8000);
+            });
+
+            this.time.delayedCall(initialRockDelay, () => {
+                this.#startSpawning('rock', () => this.#spawnRock(), 1500, 4000);
+            });
+        });
 
         // Initialise score display
-        const fontSize = Math.round(28);
-        this.#scoreDisplay = new ScoreDisplay(
-            this,
-            width - (20 * this.#scaleFactor),
-            20 * this.#scaleFactor,
-            fontSize,
-        );
+        this.#scoreDisplay = new ScoreDisplay(this, 0, 0);
 
         // Create game over text (hidden initially)
         this.#createGameOverText();
 
-        // Create debug text (hidden by default)
+        // Create debug text (hidden initially)
         this.#createDebugText();
 
         // Create buttons UI
         this.#createButtonsUI();
         this.#createPauseOverlay();
-
-        // Listen for resize events
-        this.scale.on('resize', this.resize, this);
 
         // Set up collision detection
         this.physics.add.overlap(
@@ -264,6 +194,19 @@ export class GameScene extends Phaser.Scene {
             null,
             this,
         );
+
+        // Calculate initial positions with proper scale
+        const isPortrait = height > width;
+        const scale = isPortrait
+            ? Math.max(width / BASE_WIDTH, 0.85) // Increased minimum scale for portrait
+            : this.#isMobile
+                ? Math.max(height / (BASE_HEIGHT / 2), 0.85)
+                : Math.min(
+                    width / BASE_WIDTH,
+                    height / BASE_HEIGHT,
+                );
+
+        this.#calculatePositions(width, height, scale);
 
         // Set up debug controls
         const keys = this.input.keyboard.addKeys('TAB,P');
@@ -276,16 +219,182 @@ export class GameScene extends Phaser.Scene {
     }
 
     /**
-     * Calculates positions for game objects based on current screen size
+     * Handle scene resizing
+     *
+     * @param {number} width - New game width
+     * @param {number} height - New game height
      */
-    #calculatePositions() {
-        const { _width, height } = this.scale;
+    resize(width, height) {
+        // Recheck mobile status
+        this.#isMobile = checkIfMobile();
 
-        // Calculate scale factor for UI elements only
-        this.#scaleFactor = height / this.#baseHeight;
+        // Update camera and physics world bounds
+        this.cameras.main.setBounds(0, 0, width, height);
+        this.physics.world.setBounds(0, 0, width, height);
 
-        // Ground is always at the bottom
-        this.#groundY = height - this.#groundCollisionHeight;
+        // Determine if we're in portrait mode
+        const isPortrait = height > width;
+
+        // Calculate scale based on orientation and device type
+        let scale;
+        if (isPortrait) {
+            // In portrait, use width-based scale but ensure it's not too small
+            scale = Math.max(width / BASE_WIDTH, 0.85);
+        }
+        else {
+            // In landscape, handle mobile and desktop differently
+            if (this.#isMobile) {
+                // For mobile landscape, use height-based scale with a higher minimum
+                scale = Math.max(height / (BASE_HEIGHT / 2), 0.85);
+            }
+            else {
+                // For desktop landscape, use the smaller ratio to prevent oversizing
+                scale = Math.min(width / BASE_WIDTH, height / BASE_HEIGHT);
+            }
+        }
+
+        // Update all positions and scales
+        this.#calculatePositions(width, height, scale);
+    }
+
+    /**
+     * Calculates positions for game objects based on current screen size
+     *
+     * @param {number} width - Current game width
+     * @param {number} height - Current game height
+     * @param {number} [scale=1] - Scale factor for sizing objects
+     */
+    #calculatePositions(width, height, scale = 1) {
+        // Calculate ground dimensions first - these are our reference points
+        const groundHeight = Math.ceil(Ground.HEIGHT * scale);
+        const groundCollisionHeight = Math.ceil(Ground.COLLISION_HEIGHT * scale);
+
+        // Calculate ground positions from bottom of screen
+        const groundY = height;
+        const groundTopY = groundY - groundHeight;
+        const groundCollisionY = groundY - groundCollisionHeight;
+
+        // Cache these values for other calculations
+        this.#groundY = groundTopY;
+        this.#groundCollisionHeight = groundCollisionHeight;
+
+        // Update ground
+        if (this.#ground) {
+            // Set ground scale and position (origin is bottom-left)
+            this.#ground.setScale(scale);
+            this.#ground.y = groundY;
+            this.#ground.width = width * 2;
+        }
+
+        // Update platform
+        if (this.#platform && this.#platform.body) {
+            // Position platform at collision height from bottom
+            const platformY = groundCollisionY + (groundCollisionHeight / 2);
+
+            this.#platform.setPosition(Math.ceil(width / 2), platformY);
+            this.#platform.width = width;
+
+            // Update platform physics body
+            /** @type {Phaser.Physics.Arcade.StaticBody} */
+            const body = this.#platform.body;
+            body.setSize(width, groundCollisionHeight);
+            body.updateFromGameObject();
+        }
+
+        // Update dino position
+        if (this.#dino) {
+            // Set dino X position (fixed distance from left)
+            this.#dinoX = Math.ceil(100 * scale);
+
+            // Calculate dino's position relative to platform
+            const hitboxOffset = Math.ceil((Dino.HEIGHT - Dino.STANDING_HITBOX_HEIGHT) * scale);
+
+            // Position dino so its hitbox aligns with ground collision
+            // Since origin is at bottom (1), we need to account for the hitbox offset
+            const dinoY = groundCollisionY - hitboxOffset;
+
+            // Update dino position and scale
+            this.#dino.setScale(scale);
+            this.#dino.setPosition(this.#dinoX, dinoY);
+
+            // Reset physics body to match new position
+            this.#dino.body.reset(this.#dinoX, dinoY);
+        }
+
+        // Update enemy positions and scale
+        if (this.#enemies) {
+            this.#enemies.getChildren().forEach((enemy) => {
+                enemy.setScale(scale);
+                if (enemy instanceof Bird) {
+                    enemy.y = groundTopY - (100 * scale);
+                }
+                else {
+                    enemy.y = groundCollisionY;
+                }
+            });
+        }
+
+        // Update UI elements
+        this.#updateUIPositioning(width, height, scale);
+    }
+
+    /**
+     * Updates the position and scale of UI elements
+     *
+     * @param {number} width - Current game width
+     * @param {number} height - Current game height
+     * @param {number} [scale=1] - Scale factor for sizing objects
+     */
+    #updateUIPositioning(width, height, scale = 1) {
+        const basePadding = 20;
+        const scaledPadding = basePadding * scale;
+
+        // Position score display at top-right corner
+        if (this.#scoreDisplay) {
+            this.#scoreDisplay.updatePosition(width - basePadding, basePadding, scale);
+        }
+
+        // Position pause button in top left with padding
+        if (this.#pauseButton) {
+            this.#pauseButton
+                .setPosition(scaledPadding, scaledPadding)
+                .setScale(scale);
+        }
+
+        // Position fullscreen button in top-left corner, next to pause
+        if (this.#fullscreenButton) {
+            this.#fullscreenButton
+                .setPosition(scaledPadding * 3.5, scaledPadding)
+                .setScale(scale);
+        }
+
+        // Update game over text
+        if (this.#gameOverText) {
+            this.#gameOverText
+                .setPosition(width / 2, height / 2);
+        }
+
+        // Update pause overlay if it exists
+        if (this.#pauseOverlay) {
+            // Update background
+            const background = this.#pauseOverlay.list[0];
+            background.setSize(width, height);
+
+            // Update pause header
+            const pauseHeader = this.#pauseOverlay.list[1];
+            pauseHeader.setPosition(width / 2, height * 0.25);
+
+            // Update continue button
+            const continueButton = this.#pauseOverlay.list[2];
+            continueButton.setPosition(width / 2, height * 0.45);
+
+            // Update version text
+            const versionText = this.#pauseOverlay.list[3];
+            versionText.setPosition(width / 2, height - 30);
+
+            // Center the pause menu
+            this.#pauseOverlay.setPosition(0, 0);
+        }
     }
 
     /**
@@ -334,28 +443,10 @@ export class GameScene extends Phaser.Scene {
      * Creates the game over text
      */
     #createGameOverText() {
-        const { width, height } = this.scale;
-        const fontSize = Math.round(52 * this.#scaleFactor);
-        const message = this.#isMobile ? 'Tap to Play Again' : 'Press SPACE to Play Again';
-
-        this.#gameOverText = this.add.text(
-            width / 2,
-            height / 2,
-            ['GAME OVER', message],
-            {
-                fontFamily: 'annie-use-your-telescope',
-                fontSize: `${fontSize}px`,
-                fill: '#ffffff',
-                align: 'center',
-                lineSpacing: 20,
-                stroke: '#000000',
-                strokeThickness: 3,
-            },
-        )
-            .setOrigin(0.5)
-            .setScrollFactor(0)
-            .setDepth(1000)
-            .setVisible(false);  // Start hidden
+        // Create container for game over text
+        this.#gameOverText = this.add.container(this.scale.width / 2, this.scale.height / 2);
+        this.#gameOverText.setDepth(1000)
+            .setVisible(false);
     }
 
     /**
@@ -363,7 +454,7 @@ export class GameScene extends Phaser.Scene {
      */
     #createButtonsUI() {
         const buttonAlpha = 0.5; // 50% opacity
-        const padding = 16 * this.#scaleFactor;
+        const padding = 16;
 
         // Create pause button in top left with padding
         this.#pauseButton = this.add.sprite(padding, padding, 'ui-elements-sprites', 'pauseBtn')
@@ -372,7 +463,7 @@ export class GameScene extends Phaser.Scene {
             .setOrigin(0, 0)
             .setAlpha(buttonAlpha)
             .setInteractive({ useHandCursor: true })
-            .on('pointerdown', () => this.#togglePause());
+            .on('pointerup', () => this.#togglePause());
 
         // Create fullscreen button next to pause button
         this.#fullscreenButton = this.add.sprite(0, padding, 'ui-elements-sprites', 'fullscreenBtn')
@@ -381,97 +472,104 @@ export class GameScene extends Phaser.Scene {
             .setOrigin(0, 0)
             .setAlpha(buttonAlpha)
             .setInteractive({ useHandCursor: true })
-            .on('pointerdown', () => this.#toggleFullscreen());
-
-        // Position buttons
-        this.#updateButtonPositions();
-    }
-
-    /**
-     * Updates UI button positions based on screen orientation
-     */
-    #updateButtonPositions() {
-        if (!this.#fullscreenButton || !this.#pauseButton) {
-            return;
-        }
-
-        const padding = 16;
-        const buttonWidth = 40;
-        const buttonSpacing = 10;
-
-        // Place buttons side by side with orientation-specific spacing
-        this.#pauseButton.setPosition(padding, padding);
-        this.#fullscreenButton.setPosition(padding + buttonWidth + buttonSpacing, padding);
-    }
-
-    /**
-     * Updates fullscreen button frame based on screen state
-     */
-    #updateFullscreenButton() {
-        if (!this.#fullscreenButton) {
-            return;
-        }
-
-        // Update sprite frame based on fullscreen state
-        const frame = this.#isFullscreen ? 'exitFullscreenBtn' : 'fullscreenBtn';
-        this.#fullscreenButton.setFrame(frame);
+            .on('pointerup', () => this.#toggleFullscreen());
     }
 
     /**
      * Creates the pause overlay with resume button and version info
      */
     #createPauseOverlay() {
-        // Create a container for pause elements
-        this.#pauseOverlay = this.add.container(0, 0)
-            .setScrollFactor(0)
-            .setDepth(1001)
-            .setVisible(false);
-
         const { width, height } = this.scale;
 
-        // Semi-transparent background
-        const background = this.add.rectangle(0, 0, width, height, 0x000000, 0.7)
-            .setOrigin(0, 0)
-            .setInteractive(); // Make background interactive to block input
+        // Create a semi-transparent black overlay
+        this.#pauseOverlay = this.add.container(0, 0)
+            .setScrollFactor(0)
+            .setDepth(900)
+            .setVisible(false);
 
-        // Resume button with text
-        const resumeButton = this.add.text(width / 2, height / 2, 'Resume', {
-            fontFamily: 'monospace',
-            fontSize: `${Math.round(48 * this.#scaleFactor)}px`,
-            fill: '#ffffff',
-            backgroundColor: '#222222',
-            padding: { x: 20, y: 10 },
-        })
+        // Add semi-transparent background
+        const background = this.add.rectangle(
+            0,
+            0,
+            width,
+            height,
+            0x000000,
+            0.5,
+        )
+            .setOrigin(0, 0)
+            .setInteractive(); // Block input when paused
+
+        // Add PAUSED header text
+        this.#pauseHeader = this.add.text(
+            0,
+            0,
+            'PAUSED',
+            {
+                fontFamily: 'annie-use-your-telescope',
+                fontSize: '52px',
+                color: '#ffffff',
+                align: 'center',
+            },
+        )
+            .setOrigin(0.5);
+
+        // Create continue button
+        const continueButton = this.add.text(
+            0,
+            0,
+            'Continue',
+            {
+                fontFamily: 'annie-use-your-telescope',
+                fontSize: '32px',
+                color: '#ffffff',
+                align: 'center',
+                backgroundColor: '#222222',
+                padding: { x: 20, y: 10 },
+            },
+        )
             .setOrigin(0.5)
-            .setInteractive()  // Enable hit area for the text
+            .setInteractive({ useHandCursor: true })
             .on('pointerup', () => {
                 this.#togglePause();
             });
 
-        // Calculate spacing based on orientation
-        const isPortrait = height > width;
-        const versionSpacing = isPortrait ? 120 : 60;
-
         // Version text
-        const versionText = this.add.text(width / 2, (height / 2) + versionSpacing, `Version: ${gameConfig.version}`, {
-            fontFamily: 'monospace',
-            fontSize: `${Math.round(isPortrait ? 22 : 24 * this.#scaleFactor)}px`,
-            fill: '#ffffff',
-        }).setOrigin(0.5);
+        const versionText = this.add.text(
+            0,
+            0,
+            `Version: ${gameConfig.version}`,
+            {
+                fontFamily: 'annie-use-your-telescope',
+                fontSize: '24px',
+                color: '#ffffff',
+            },
+        ).setOrigin(0.5);
 
         // Add all elements to the container
-        this.#pauseOverlay.add([background, resumeButton, versionText]);
+        this.#pauseOverlay.add([
+            background,
+            this.#pauseHeader,
+            continueButton,
+            versionText,
+        ]);
     }
 
     /**
      * Toggles the game pause state
      */
     #togglePause() {
+        // Don't pause game if game over
+        if (this.#isGameOver) {
+            return;
+        }
+
         this.#isPaused = !this.#isPaused;
+
+        // Show/hide pause overlay
+        this.#pauseOverlay.visible = this.#isPaused;
 
         if (this.#isPaused) {
             this.physics.pause();
-            this.#pauseOverlay.setVisible(true);
 
             // Pause dino
             this.#dino.pause();
@@ -483,6 +581,14 @@ export class GameScene extends Phaser.Scene {
             this.#enemies.getChildren().forEach((enemy) => {
                 enemy.pause();
             });
+
+            // Hide in-game UI elements
+            if (this.#pauseButton) {
+                this.#pauseButton.setVisible(false);
+            }
+            if (this.#fullscreenButton) {
+                this.#fullscreenButton.setVisible(false);
+            }
         }
         else {
             this.physics.resume();
@@ -498,6 +604,14 @@ export class GameScene extends Phaser.Scene {
             this.#enemies.getChildren().forEach((enemy) => {
                 enemy.resume();
             });
+
+            // Show in-game UI elements
+            if (this.#pauseButton) {
+                this.#pauseButton.setVisible(true);
+            }
+            if (this.#fullscreenButton) {
+                this.#fullscreenButton.setVisible(true);
+            }
         }
     }
 
@@ -518,94 +632,17 @@ export class GameScene extends Phaser.Scene {
             }
 
             this.#isFullscreen = !this.#isFullscreen;
-            this.#updateFullscreenButton();
+
+            if (!this.#fullscreenButton) {
+                return;
+            }
+
+            // Update sprite frame based on fullscreen state
+            const frame = this.#isFullscreen ? 'exitFullscreenBtn' : 'fullscreenBtn';
+            this.#fullscreenButton.setFrame(frame);
         }
         catch (error) {
             console.warn('Fullscreen request failed:', error);
-        }
-    }
-
-    /**
-     * Handle window resize events
-     *
-     * @param {Phaser.Structs.Size} gameSize - New game size
-     */
-    resize(gameSize) {
-        const { width, height } = gameSize;
-
-        // Recalculate positions
-        this.#calculatePositions();
-
-        // Update ground position and size (only width changes)
-        this.#ground.setPosition(0, height - Ground.HEIGHT);
-        this.#ground.width = width;
-
-        // Update platform position and size
-        this.#platform.setPosition(width / 2, this.#groundY + (this.#groundCollisionHeight / 2));
-        this.#platform.width = width;
-
-        // Update platform physics body
-        /** @type {Phaser.Physics.Arcade.StaticBody} */
-        const body = this.#platform.body;
-        body.setSize(width, this.#groundCollisionHeight);
-        body.updateFromGameObject();
-
-        // Update dino Y position only
-        this.#dino.setPosition(this.#dinoX, this.#groundY - (this.#groundCollisionHeight / 2));
-
-        // Update score display position and scale (UI element)
-        const fontSize = Math.round(36 * this.#scaleFactor);
-        this.#scoreDisplay.updateFontSize(fontSize);
-        this.#scoreDisplay.updatePosition(width - (20 * this.#scaleFactor), 20 * this.#scaleFactor);
-
-        // Recheck mobile status
-        this.#isMobile = checkIfMobile();
-
-        // Update game over text if it exists (UI element)
-        if (this.#gameOverText) {
-            const message = this.#isMobile ? 'Tap to Play Again' : 'Press SPACE to Play Again';
-            this.#gameOverText
-                .setPosition(width / 2, height / 2)
-                .setStyle({ fontSize: `${Math.round(52 * this.#scaleFactor)}px` })
-                .setText(['GAME OVER', message]);
-        }
-
-        // Update active obstacles Y position
-        this.#enemies.getChildren().forEach((enemy) => {
-            if (enemy instanceof Bird) {
-                // Update bird height relative to ground
-                enemy.y = this.#groundY - 100;
-            }
-            else {
-                // Update rock position to ground level
-                enemy.y = this.#groundY;
-            }
-        });
-
-        // Update UI button positions
-        this.#updateButtonPositions();
-
-        // Update pause overlay if it exists
-        if (this.#pauseOverlay) {
-            const { width, height } = gameSize;
-
-            // Update background
-            const background = this.#pauseOverlay.list[0];
-            background.setSize(width, height);
-
-            // Update resume button
-            const resumeButton = this.#pauseOverlay.list[1];
-            resumeButton
-                .setPosition(width / 2, height / 2)
-                .setStyle({ fontSize: `${Math.round(48 * this.#scaleFactor)}px` });
-
-            // Update version text
-            const versionText = this.#pauseOverlay.list[2];
-            const isPortrait = height > width;
-            const versionSpacing = isPortrait ? 120 : 60;
-            versionText
-                .setPosition(width / 2, (height / 2) + versionSpacing)
-                .setStyle({ fontSize: `${Math.round(isPortrait ? 22 : 24 * this.#scaleFactor)}px` });
         }
     }
 
@@ -665,8 +702,8 @@ export class GameScene extends Phaser.Scene {
         // Get a random speed from the bird's speed range
         const baseSpeed = Phaser.Math.Between(Bird.SPEED_RANGE.min, Bird.SPEED_RANGE.max);
 
-        // Scale the speed based on current difficulty (each level adds 10% more speed)
-        const speedMultiplier = 1 + ((this.#difficultyManager.getCurrentLevel() - 1) * 0.1);
+        // Scale the speed based on current difficulty (each level adds 5% more speed)
+        const speedMultiplier = 1 + ((this.#difficultyManager.getCurrentLevel() - 1) * 0.05);
         const finalSpeed = baseSpeed * speedMultiplier;
 
         // Spawn bird with scaled random speed
@@ -688,11 +725,12 @@ export class GameScene extends Phaser.Scene {
             return null;
         }
 
+        // Spawn rock offscreen to the right
         return new SmallRock(
             this,
             this.scale.width + 100, // Start off-screen to the right
             this.scale.height - this.#groundCollisionHeight,
-            this.#difficultyManager.getCurrentSpeed(), // Use current difficulty speed
+            this.#difficultyManager.getCurrentSpeed(), // Pass current speed for reference
         );
     }
 
@@ -791,30 +829,38 @@ export class GameScene extends Phaser.Scene {
 
     /**
      * Updates the spawn rates of obstacles based on current difficulty
-     *
-     * @private
      */
     #updateSpawnRates() {
-        // Update bird spawn rate
-        if (this.#spawnTimers.has('bird')) {
-            this.#spawnTimers.get('bird').destroy();
-            this.#startSpawning(
-                'bird',
-                () => this.#spawnBird(),
-                this.#difficultyManager.getSpawnInterval(4000),
-                this.#difficultyManager.getSpawnInterval(14000),
+        const speedMultiplier = this.#difficultyManager.getCurrentSpeed() / this.#difficultyManager.getBaseSpeed();
+
+        // Only birds need speed updates since rocks use ground position
+        this.#enemies.getChildren().forEach((enemy) => {
+            if (enemy instanceof Bird && enemy.body) {
+                const baseSpeed = Phaser.Math.Between(Bird.SPEED_RANGE.min, Bird.SPEED_RANGE.max);
+                const speedMult = 1 + ((this.#difficultyManager.getCurrentLevel() - 1) * 0.05);
+                enemy.body.setVelocityX(baseSpeed * speedMult);
+            }
+        });
+
+        // Adjust spawn timers based on difficulty
+        if (this.#spawnTimers.has('rock')) {
+            const rockTimer = this.#spawnTimers.get('rock');
+            const newDelay = Phaser.Math.Between(
+                2000 / speedMultiplier,  // Faster minimum spawn rate
+                8000 / speedMultiplier,   // Faster maximum spawn rate
             );
+            rockTimer.delay = newDelay;
+            rockTimer.reset({ delay: newDelay, callback: rockTimer.callback, callbackScope: this });
         }
 
-        // Update rock spawn rate
-        if (this.#spawnTimers.has('rock')) {
-            this.#spawnTimers.get('rock').destroy();
-            this.#startSpawning(
-                'rock',
-                () => this.#spawnRock(),
-                this.#difficultyManager.getSpawnInterval(1000),
-                this.#difficultyManager.getSpawnInterval(7000),
+        if (this.#spawnTimers.has('bird')) {
+            const birdTimer = this.#spawnTimers.get('bird');
+            const newDelay = Phaser.Math.Between(
+                4000 / speedMultiplier,  // Faster minimum spawn rate
+                14000 / speedMultiplier,  // Faster maximum spawn rate
             );
+            birdTimer.delay = newDelay;
+            birdTimer.reset({ delay: newDelay, callback: birdTimer.callback, callbackScope: this });
         }
     }
 
@@ -825,6 +871,15 @@ export class GameScene extends Phaser.Scene {
      */
     getGroundSpeed() {
         return this.#ground.getScrollSpeed();
+    }
+
+    /**
+     * Gets the ground object
+     *
+     * @returns {Ground} The ground object
+     */
+    getGround() {
+        return this.#ground;
     }
 
     /**
@@ -862,12 +917,157 @@ export class GameScene extends Phaser.Scene {
         // Clean up timers
         this.#cleanup();
 
-        // Reset score and difficulty when game restarts
+        // Get final scores before resetting
+        const finalScore = this.#scoreDisplay.getCurrentScore();
+        const highScore = this.#scoreDisplay.getHighScore();
+        const beatHighScore = finalScore >= highScore && finalScore > 0;
+
+        // Clear any existing game over text
+        if (this.#gameOverText) {
+            this.#gameOverText.removeAll(true);
+        }
+
+        const message = this.#isMobile ? 'Tap to Play Again' : 'Press SPACE to Play Again';
+        const scoreText = `Score: ${finalScore}m`;
+        const gameOverLines = ['GAME OVER', scoreText];
+
+        // Add celebration message if high score was beaten
+        if (beatHighScore) {
+            gameOverLines.splice(1, 0, 'NEW HIGH SCORE!');
+        }
+
+        gameOverLines.push(message);
+
+        // Set different font sizes for each line
+        const textConfig = {
+            fontFamily: 'annie-use-your-telescope',
+            fill: '#ffffff',
+            align: 'center',
+            lineSpacing: 20,
+            stroke: '#000000',
+            strokeThickness: 3,
+        };
+
+        // Apply different font sizes to each line
+        let currentY = 0;
+        const lineSpacing = 20;
+        let highScoreTextY = 0;
+
+        gameOverLines.forEach((line, index) => {
+            let fontSize = 32; // Default size for most lines
+            let textStyle = {
+                ...textConfig,
+                fontSize: `${fontSize}px`,
+            };
+
+            if (index === 0) {
+                fontSize = 52; // "GAME OVER"
+                textStyle.fontSize = `${fontSize}px`;
+                textStyle.strokeThickness = 5;
+            }
+            else if (line.includes('NEW HIGH SCORE')) {
+                fontSize = 40; // High score celebration
+                textStyle = {
+                    ...textStyle,
+                    fontSize: `${fontSize}px`,
+                    fill: '#FFD700', // Gold
+                    stroke: '#AD9203',
+                    strokeThickness: 3,
+                    shadow: {
+                        offsetX: 0,
+                        offsetY: 0,
+                        color: '#FFD700',
+                        blur: 10,
+                        stroke: true,
+                        fill: true,
+                    },
+                };
+                highScoreTextY = currentY;
+
+                // Create a subtle floating animation
+                const lineText = this.add.text(0, currentY, line, textStyle)
+                    .setOrigin(0.5)
+                    .setData('originalSize', fontSize);
+
+                // Subtle scale pulse animation
+                this.tweens.add({
+                    targets: lineText,
+                    scaleX: 1.1,
+                    scaleY: 1.1,
+                    duration: 1000,
+                    ease: 'Sine.easeInOut',
+                    yoyo: true,
+                    repeat: -1,
+                });
+
+                this.#gameOverText.add(lineText);
+                currentY += fontSize + lineSpacing;
+
+                return; // Skip the default text creation
+            }
+            else if (line.includes('Score:')) {
+                fontSize = 36; // Score display
+                textStyle.fontSize = `${fontSize}px`;
+            }
+
+            const lineText = this.add.text(0, currentY, line, textStyle)
+                .setOrigin(0.5)
+                .setData('originalSize', fontSize); // Store original size for scaling
+
+            this.#gameOverText.add(lineText);
+            currentY += fontSize + lineSpacing;
+        });
+
+        // Center the container's content vertically
+        const totalHeight = currentY - lineSpacing;
+        this.#gameOverText.list.forEach((text) => {
+            text.y -= totalHeight / 2;
+        });
+
+        // Create celebration particles if high score was beaten
+        if (beatHighScore) {
+            const width = this.scale.width;
+            const height = this.scale.height;
+            const particleY = (height / 2) + (highScoreTextY - (totalHeight / 2));
+
+            const emitter = this.add.particles(0, 0, 'particle', {
+                x: width / 2,
+                y: particleY,
+                lifespan: 4000,
+                speed: { min: 100, max: 300 },
+                scale: { start: 0.8, end: 0 },
+                gravityY: 0,
+                quantity: 4,
+                frequency: 50,
+                blendMode: 'ADD',
+                tint: [0xffff00, 0xff00ff, 0x00ffff, 0xff0000],
+                angle: { min: 0, max: 360 }, // Emit in all directions
+                rotate: { min: 0, max: 360 }, // Particles spin as they move
+            });
+
+            // Stop emitting after 10 seconds
+            this.time.delayedCall(20000, () => {
+                emitter.stop();
+
+                // Remove the emitter after it's done
+                this.time.delayedCall(1000, () => {
+                    emitter.destroy();
+                });
+            });
+        }
+
+        // Show game over text with score
+        this.#gameOverText.setVisible(true);
+
+        // Hide in-game UI elements
+        this.#pauseButton.setVisible(false);
+        this.#fullscreenButton.setVisible(false);
+        this.#scoreDisplay.toggleScoreTextVisibility();
+        this.#dino.toggleButtonVisibility();
+
+        // Now reset the score and difficulty for the next game
         this.#scoreDisplay.reset();
         this.#difficultyManager.reset();
-
-        // Show game over text
-        this.#gameOverText.setVisible(true);
 
         // Listen for restart input
         if (this.#isMobile) {
@@ -896,6 +1096,9 @@ export class GameScene extends Phaser.Scene {
 
         // Reset game state
         this.#isGameOver = false;
+        this.#isPaused = false;
+        this.#spawnTimers.clear();
+        this.physics.resume();
 
         // Restart the scene
         this.scene.restart();

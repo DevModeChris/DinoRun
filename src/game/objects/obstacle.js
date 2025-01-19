@@ -54,23 +54,32 @@ export class Obstacle extends Phaser.GameObjects.Sprite {
      * @param {number} offsetY - Y offset for the collision box
      */
     setCollisionBox(width, height, offsetX = 0, offsetY = 0) {
-        if (this.body) {
-            this.body.setSize(width, height);
-
-            // Center the body within the sprite first
-            const centerX = this.x - (width / 2);
-            const centerY = this.y - (height / 2);
-
-            // Then apply the offsets
-            this.body.position.x = centerX + offsetX;
-            this.body.position.y = centerY + offsetY;
+        if (!this.body) {
+            return;
         }
+
+        // Set the collision box size
+        this.body.setSize(width, height);
+
+        // Calculate the offset from the sprite's origin
+        const offsetFromOrigin = {
+            x: (this.displayWidth * this.originX) - (width * 0.5) + offsetX,
+            y: (this.displayHeight * this.originY) - (height * 0.5) + offsetY,
+        };
+
+        // Set the offset
+        this.body.setOffset(offsetFromOrigin.x, offsetFromOrigin.y);
     }
 
     /**
      * Pause obstacle movement
      */
     pause() {
+        // For static bodies (like rocks), we don't need to store velocity
+        if (!this.body || this.body.immovable) {
+            return;
+        }
+
         this.#originalVelocityX = this.body.velocity.x;
         this.body.setVelocityX(0);
     }
@@ -79,6 +88,11 @@ export class Obstacle extends Phaser.GameObjects.Sprite {
      * Resume obstacle movement
      */
     resume() {
+        // For static bodies (like rocks), we don't need to restore velocity
+        if (!this.body || this.body.immovable) {
+            return;
+        }
+
         this.body.setVelocityX(this.#originalVelocityX);
     }
 

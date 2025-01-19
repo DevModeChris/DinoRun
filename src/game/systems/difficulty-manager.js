@@ -10,16 +10,16 @@ export class DifficultyManager {
     #currentLevel = 1;
 
     /** @type {number} */
-    #maxLevel = 10;
+    #maxLevel = 20;
 
     /** @type {number} */
-    #scoreThreshold = 100;
+    #scoreThreshold = 80;
 
     /** @type {number} */
-    #baseSpeed = 300;
+    #baseSpeed = 280;
 
     /** @type {number} */
-    #speedIncrement = 50;
+    #speedIncrement = 35;
 
     /** @type {number} */
     #baseSpawnRate = 1.0;
@@ -74,6 +74,15 @@ export class DifficultyManager {
      */
     getCurrentLevel() {
         return this.#currentLevel;
+    }
+
+    /**
+     * Gets the base speed of the game
+     *
+     * @returns {number} Base speed
+     */
+    getBaseSpeed() {
+        return this.#baseSpeed;
     }
 
     /**

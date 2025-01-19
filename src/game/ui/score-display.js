@@ -17,6 +17,9 @@ export class ScoreDisplay {
     /** @type {Phaser.GameObjects.Text} */
     #highScoreText;
 
+    /** @type {number} */
+    #baseFontSize;
+
     /**
      * Creates our scoreboard!
      *
@@ -26,6 +29,7 @@ export class ScoreDisplay {
      * @param {number} [fontSize=28] - Size of the score text
      */
     constructor(scene, x, y, fontSize = 28) {
+        this.#baseFontSize = fontSize;
         this.#loadHighScore();
 
         const textConfig = {
@@ -127,21 +131,22 @@ export class ScoreDisplay {
     }
 
     /**
-     * Updates the position of both score texts
+     * Updates the display position and scale
      *
      * @param {number} x - New x position
      * @param {number} y - New y position
+     * @param {number} scale - New scale factor
      */
-    updatePosition(x, y) {
-        // Update high score position
-        this.#highScoreText.setPosition(x, y);
+    updatePosition(x, y, scale = 1) {
+        // Update font size
+        const fontSize = Math.round(this.#baseFontSize * scale);
+        this.#highScoreText.setFontSize(`${fontSize}px`);
+        this.#currentScoreText.setFontSize(`${fontSize}px`);
 
-        // Update current score position relative to high score
-        const padding = 20;
-        this.#currentScoreText.setPosition(
-            x - this.#highScoreText.width - padding,
-            y,
-        );
+        // Update positions
+        this.#highScoreText.setPosition(x, y);
+        const padding = 20 * scale;
+        this.#currentScoreText.setPosition(x - this.#highScoreText.width - padding, y);
     }
 
     /**
@@ -160,5 +165,13 @@ export class ScoreDisplay {
         this.#highScoreText.setStyle(textConfig);
         this.#currentScoreText.setStyle(textConfig);
         this.#updateScorePosition();
+    }
+
+    /**
+     * Hides or shows the score text
+     */
+    toggleScoreTextVisibility() {
+        this.#highScoreText.setVisible(!this.#highScoreText.visible);
+        this.#currentScoreText.setVisible(!this.#currentScoreText.visible);
     }
 }

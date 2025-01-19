@@ -29,7 +29,13 @@ export class Dino extends Phaser.GameObjects.Sprite {
     static DUCKING_OFFSET_X = 12;
 
     /** @type {number} */
+    static MAX_JUMPS = 2;
+
+    /** @type {number} */
     #jumpForce = 600;
+
+    /** @type {number} */
+    #remainingJumps = Dino.MAX_JUMPS;
 
     /** @type {boolean} */
     #isJumping = false;
@@ -57,6 +63,15 @@ export class Dino extends Phaser.GameObjects.Sprite {
 
     /** @type {Phaser.GameObjects.Sprite} */
     #duckButton;
+
+    /** @type {boolean} */
+    #keyJumpPressed = false;
+
+    /** @type {boolean} */
+    #touchJumpPressed = false;
+
+    /** @type {boolean} */
+    #justDoubleJumped = false;
 
     /**
      * Creates our lovable dino character! 🦖
@@ -199,11 +214,23 @@ export class Dino extends Phaser.GameObjects.Sprite {
         /** @type {Phaser.Physics.Arcade.Body} */
         const body = this.body;
         const wasJumping = this.#isJumping;
+        const wasTouchingGround = body.touching.down;
+
+        // Update jumping state
         this.#isJumping = !body.touching.down;
 
+        // Reset jumps when touching ground
+        if (wasTouchingGround && !wasJumping) {
+            this.#remainingJumps = Dino.MAX_JUMPS;
+        }
+
         // Handle keyboard controls
-        if ((this.#keys.UP.isDown || this.#keys.SPACE.isDown) && body.touching.down) {
+        if ((this.#keys.UP.isDown || this.#keys.SPACE.isDown) && !this.#keyJumpPressed && this.#remainingJumps > 0) {
             this.jump();
+            this.#keyJumpPressed = true;
+        }
+        else if (!(this.#keys.UP.isDown || this.#keys.SPACE.isDown)) {
+            this.#keyJumpPressed = false;
         }
 
         if (this.#keys.DOWN.isDown || this.#keys.CTRL.isDown) {
@@ -215,8 +242,12 @@ export class Dino extends Phaser.GameObjects.Sprite {
 
         // Handle mobile controls
         if (this.#isMobile) {
-            if (this.#activeJumpPointers.size > 0 && body.touching.down) {
+            if (this.#activeJumpPointers.size > 0 && !this.#touchJumpPressed && this.#remainingJumps > 0) {
                 this.jump();
+                this.#touchJumpPressed = true;
+            }
+            else if (this.#activeJumpPointers.size === 0) {
+                this.#touchJumpPressed = false;
             }
 
             if (this.#activeDuckPointers.size > 0) {
@@ -236,12 +267,14 @@ export class Dino extends Phaser.GameObjects.Sprite {
      */
     #updateAnimations(wasJumping) {
         if (this.#isJumping) {
-            if (!wasJumping) {
-                // Just started jumping
+            // If we just started jumping or just performed a double jump
+            if (!wasJumping || this.#justDoubleJumped) {
                 this.play('dino-jump-up');
+                this.#justDoubleJumped = false;
             }
+
+            // Hold the peak frame once the jump-up animation completes
             else if (this.anims.currentAnim?.key === 'dino-jump-up' && !this.anims.isPlaying) {
-                // Hold the peak frame
                 this.setFrame('jump-3');
             }
             this.#wasInAir = true;
@@ -262,6 +295,18 @@ export class Dino extends Phaser.GameObjects.Sprite {
         }
         else {
             // Running
+            this.play('dino-run', true);
+        }
+    }
+
+    /**
+     * Handles animation complete events
+     *
+     * @param {Phaser.Animations.Animation} animation - The animation that completed
+     * @param {Phaser.Animations.AnimationFrame} _frame - The final animation frame
+     */
+    #onAnimationComplete(animation, _frame) {
+        if (animation.key === 'dino-jump-land') {
             this.play('dino-run', true);
         }
     }
@@ -354,27 +399,22 @@ export class Dino extends Phaser.GameObjects.Sprite {
     }
 
     /**
-     * Handles animation complete events
-     *
-     * @param {Phaser.Animations.Animation} animation - The animation that completed
-     * @param {Phaser.Animations.AnimationFrame} _frame - The final animation frame
-     */
-    #onAnimationComplete(animation, _frame) {
-        if (animation.key === 'dino-jump-land') {
-            this.play('dino-run', true);
-        }
-    }
-
-    /**
      * Makes the dino jump! 🦘
+     * The dino can jump twice before needing to touch the ground again! ✨
      */
     jump() {
         /** @type {Phaser.Physics.Arcade.Body} */
         const body = this.body;
-        if (body.touching.down) {
+        if (this.#remainingJumps > 0) {
             body.setVelocityY(-this.#jumpForce);
             this.#isJumping = true;
-            this.play('dino-jump-up');
+
+            // Flag if this is a double jump (not the first jump)
+            if (this.#remainingJumps < Dino.MAX_JUMPS) {
+                this.#justDoubleJumped = true;
+            }
+
+            this.#remainingJumps--;
         }
     }
 
@@ -452,6 +492,14 @@ export class Dino extends Phaser.GameObjects.Sprite {
         this.anims.pause();
         this.body.setVelocityX(0);
         this.body.setVelocityY(0);
+
+        // Hide mobile controls
+        if (this.#jumpButton) {
+            this.#jumpButton.setVisible(false);
+        }
+        if (this.#duckButton) {
+            this.#duckButton.setVisible(false);
+        }
     }
 
     /**
@@ -459,5 +507,25 @@ export class Dino extends Phaser.GameObjects.Sprite {
      */
     resume() {
         this.anims.resume();
+
+        // Show mobile controls
+        if (this.#jumpButton) {
+            this.#jumpButton.setVisible(true);
+        }
+        if (this.#duckButton) {
+            this.#duckButton.setVisible(true);
+        }
+    }
+
+    /**
+     * Toggles the visibility of the jump and duck buttons
+     */
+    toggleButtonVisibility() {
+        if (this.#jumpButton) {
+            this.#jumpButton.setVisible(!this.#jumpButton.visible);
+        }
+        if (this.#duckButton) {
+            this.#duckButton.setVisible(!this.#duckButton.visible);
+        }
     }
 }

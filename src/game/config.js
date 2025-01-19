@@ -3,7 +3,12 @@
  */
 
 import Phaser from 'phaser';
+import { BootScene } from './scenes/boot-scene.js';
 import { GameScene } from './scenes/game-scene.js';
+
+// Base dimensions for scaling calculations (16:9 aspect ratio)
+export const BASE_WIDTH = 1280;
+export const BASE_HEIGHT = 720;
 
 export const gameConfig = {
     // The type of renderer (WebGL is faster and better)
@@ -13,7 +18,7 @@ export const gameConfig = {
     title: 'Dino Run',
 
     // The version of our game
-    version: '0.2.5-b16012025',
+    version: '0.3.1 (190125)',
 
     // Hide the Phaser logo
     banner: {
@@ -24,31 +29,31 @@ export const gameConfig = {
     scale: {
         mode: Phaser.Scale.RESIZE,
         parent: 'game',
-        width: '100%',
-        height: '100%',
+        fullscreenTarget: 'game',
+        width: BASE_WIDTH,
+        height: BASE_HEIGHT,
         expandParent: true,
         autoRound: true,
+        autoCenter: Phaser.Scale.CENTER_BOTH,
     },
 
-    // Set up pixel art settings
+    // Configure the game physics
+    physics: {
+        default: 'arcade',
+        arcade: {
+            gravity: { y: 1400 },
+            debug: false,
+        },
+    },
+
+    // The scenes that make up our game
+    scene: [BootScene, GameScene],
+
+    // Enable pixel art mode for crisp graphics
     render: {
         pixelArt: true,
         antialias: false,
         roundPixels: true,
         autoMobilePipeline: true,
     },
-
-    // Configure physics
-    physics: {
-        default: 'arcade',
-        arcade: {
-            gravity: { y: 1000 },
-            debug: false,
-        },
-    },
-
-    // Add our game scenes
-    scene: [
-        GameScene,
-    ],
 };

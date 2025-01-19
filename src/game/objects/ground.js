@@ -7,10 +7,13 @@ import Phaser from 'phaser';
 
 export class Ground extends Phaser.GameObjects.TileSprite {
     /** @type {number} */
-    #scrollSpeed = 300;
+    #scrollSpeed = 280;
 
     /** @type {number} */
     static HEIGHT = 81;  // Full sprite height including grass
+
+    /** @type {number} */
+    static COLLISION_HEIGHT = 40; // Height of the collision area (not the full sprite height)
 
     /** @type {number} */
     static WIDTH = 825;
@@ -33,8 +36,8 @@ export class Ground extends Phaser.GameObjects.TileSprite {
             frameKey, // frame key (which ground style to use)
         );
 
-        // Set the origin to top-left since we're scrolling from right to left
-        this.setOrigin(0, 0);
+        // Set the origin to bottom-left since we're scrolling from right to left
+        this.setOrigin(0, 1);
 
         // Set depth above sky,stars,etc but below lighting and ui
         this.setDepth(200);
