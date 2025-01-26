@@ -118,7 +118,7 @@ DinoRun/
 │   ├── game/
 │   │   ├── scenes/       # Game scenes
 │   │   ├── objects/      # Game object classes
-│   │   ├── ui/           # UI components and overlays
+│   │   ├── systems/      # Game system classes, managers, etc.
 │   │   └── config.js     # Game configuration
 │   ├── utils/
 │   │   └── helpers.js    # Utility functions

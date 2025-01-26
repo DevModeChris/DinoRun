@@ -13,6 +13,9 @@ export class SkySystem {
     /** @type {number} */
     #timeOfDay;
 
+    /** @type {number} */
+    #lastUpdateTime;
+
     /** @type {Phaser.GameObjects.Graphics} */
     #skyGradient;
 
@@ -52,7 +55,18 @@ export class SkySystem {
     /** @type {number} */
     #lastSpawnCheck = 0;
 
-    /** @type {Object} */
+    /**
+     * The duration of the day/night cycle in milliseconds.
+     *
+     * @type {number}
+     */
+    static DAY_NIGHT_CYCLE_DURATION = 300000; // 5 minutes in milliseconds
+
+    /**
+     * The color palettes for the sky during different times of day.
+     *
+     * @type {Object}
+     */
     static PALETTES = {
         DAWN: {
             top: 0x2e5a89,
@@ -76,7 +90,11 @@ export class SkySystem {
         },
     };
 
-    /** @type {Object} */
+    /**
+     * Lighting effects for different times of day.
+     *
+     * @type {Object}
+     */
     static LIGHTING = {
         DAWN: {
             colour: 0xff9966,
@@ -96,7 +114,11 @@ export class SkySystem {
         },
     };
 
-    /** @type {Object} */
+    /**
+     * Configuration for star effects.
+     *
+     * @type {Object}
+     */
     static STAR_CONFIG = {
         ENABLED: true,        // Enable stars
         COUNT: 50,            // Number of stars
@@ -109,7 +131,11 @@ export class SkySystem {
         Y_SPAWN_AREA: 0.9,    // Percentage of sky the stars spawn in (Top 90%)
     };
 
-    /** @type {Object} */
+    /**
+     * Configuration for aurora effects.
+     *
+     * @type {Object}
+     */
     static AURORA_CONFIG = {
         ENABLED: true,       // Enable aurora
         WAVES: 3,            // Number of overlapping aurora waves
@@ -136,7 +162,11 @@ export class SkySystem {
         FADE_DURATION: 5,   // Fade in/out duration in seconds
     };
 
-    /** @type {Object} */
+    /**
+     * Configuration for cloud effects.
+     *
+     * @type {Object}
+     */
     static CLOUD_CONFIG = {
         ENABLED: false,    // Enable clouds
         MIN_CLOUDS: 2,     // Fewer clouds for cleaner look
@@ -166,7 +196,11 @@ export class SkySystem {
         },
     };
 
-    /** @type {Object} */
+    /**
+     * Configuration for weather effects.
+     *
+     * @type {Object}
+     */
     static WEATHER_CONFIG = {
         ENABLED: false,             // Enable weather system
         RAIN: {
@@ -206,6 +240,12 @@ export class SkySystem {
     /** @type {number} */
     #weatherTimer = 0;
 
+    /** @type {number} */
+    #initialSceneWidth = 0;
+
+    /** @type {number} */
+    #initialSceneHeight = 0;
+
     /**
      * Creates our magical sky system! ✨
      *
@@ -213,7 +253,12 @@ export class SkySystem {
      */
     constructor(scene) {
         this.#scene = scene;
-        this.#timeOfDay = Math.random(); // Start at a random time
+        this.#timeOfDay = Math.random(); // Start at a random time of day
+        this.#lastUpdateTime = 0;
+
+        // Get initial scene dimensions
+        this.#initialSceneWidth = this.#scene.scale.width || window.innerWidth;
+        this.#initialSceneHeight = this.#scene.scale.height || window.innerHeight;
 
         // Create all components first
         this.#createSkyGradient();
@@ -236,22 +281,18 @@ export class SkySystem {
      */
     #createSkyGradient() {
         this.#skyGradient = this.#scene.add.graphics();
-        this.#updateSkyGradient();
+        this.#updateSkyGradient(this.#initialSceneWidth, this.#initialSceneHeight);
     }
 
     /**
      * Creates the lighting effects system
      */
     #createLighting() {
-        // Get initial dimensions
-        const width = this.#scene.scale.width || window.innerWidth;
-        const height = this.#scene.scale.height || window.innerHeight;
-
         // Create a full-screen rectangle for lighting effects
         this.#lighting = this.#scene.add.rectangle(
-            0, 0,
-            width,
-            height,
+            -5, 0,
+            this.#initialSceneWidth + 10,
+            this.#initialSceneHeight,
             0x000000,
             0,
         )
@@ -261,44 +302,120 @@ export class SkySystem {
     }
 
     /**
-     * Updates sizes and positions of all sky elements
+     * Gets the main camera bounds and adjusts them for our sky elements! 🎥
+     *
+     * @returns {Phaser.Geom.Rectangle} The camera bounds to use for sky elements
+     */
+    #getCameraBounds() {
+        const cameraManager = this.#scene.getCameraManager?.();
+        const mainCamera = cameraManager?.getMainCamera();
+
+        if (mainCamera) {
+            return mainCamera.getBounds();
+        }
+
+        // Fallback to scene dimensions if no camera manager
+        return {
+            x: 0,
+            y: 0,
+            width: this.#scene.scale.width,
+            height: this.#scene.scale.height,
+        };
+    }
+
+    /**
+     * Updates sizes and positions of all sky elements! ✨
+     * Makes sure our beautiful sky follows the camera properly.
      *
      * @param {Phaser.Structs.Size} gameSize - New game size
      */
     resize(gameSize) {
         const { width, height } = gameSize;
+        const bounds = this.#getCameraBounds();
 
-        // Update sky gradient
+        // Update sky gradient to match camera bounds exactly
         if (this.#skyGradient && !this.#skyGradient.destroyed) {
-            this.#updateSkyGradient();
+            this.#updateSkyGradient(bounds);
         }
 
-        // Update lighting
+        // Update lighting to match viewport exactly (no padding needed)
         if (this.#lighting && !this.#lighting.destroyed) {
-            this.#lighting.setSize(width, height);
+            this.#lighting.setPosition(-5, 0);
+            this.#lighting.setSize(width + 10, height);
         }
 
-        // Update star container
+        // Update star container to match camera bounds
         if (this.#starContainer && !this.#starContainer.destroyed) {
+            this.#starContainer.setPosition(bounds.x, bounds.y);
+            this.#starContainer.width = bounds.width;
+            this.#starContainer.height = bounds.height;
+
             // Reposition stars within new bounds
             this.#stars.forEach(({ star }) => {
                 if (star && !star.destroyed) {
                     star.setPosition(
-                        Math.random() * width,
-                        Math.random() * (height * SkySystem.STAR_CONFIG.Y_SPAWN_AREA),
+                        bounds.x + (Math.random() * bounds.width),
+                        bounds.y + (Math.random() * (bounds.height * SkySystem.STAR_CONFIG.Y_SPAWN_AREA)),
                     );
                 }
             });
         }
 
-        // Update aurora if active
+        // Update aurora to match camera bounds
         if (this.#auroraGraphics && !this.#auroraGraphics.destroyed) {
-            for (let i = 0; i < this.#auroraWaves.length; i++) {
-                this.#auroraWaves[i].y = ((height * 0.2) + (i * 30));
-            }
+            this.#auroraGraphics.clear();
+            this.#auroraGraphics.setPosition(bounds.x, bounds.y);
 
-            // this.#updateAurora();
+            // Update aurora wave positions relative to bounds
+            for (let i = 0; i < this.#auroraWaves.length; i++) {
+                this.#auroraWaves[i].y = bounds.y + (bounds.height * 0.2) + (i * 30);
+            }
         }
+    }
+
+    /**
+     * Updates our sky gradient with current colours! 🌈
+     * Creates a smooth transition between our sky colours.
+     *
+     * @param {Phaser.Geom.Rectangle} bounds - The bounds to draw the sky gradient within
+     */
+    #updateSkyGradient(bounds = this.#getCameraBounds()) {
+        if (!this.#skyGradient) {
+            return;
+        }
+
+        const currentPalette = this.#getCurrentPalette();
+        this.#skyGradient.clear();
+
+        // Draw top gradient (top to middle) - like painting the upper sky! 🎨
+        this.#skyGradient.fillGradientStyle(
+            currentPalette.top,    // Top left
+            currentPalette.top,    // Top right
+            currentPalette.middle, // Bottom left
+            currentPalette.middle, // Bottom right
+            1,  // Alpha
+        );
+        this.#skyGradient.fillRect(
+            bounds.x - 5,
+            bounds.y,
+            bounds.width,
+            bounds.height / 2,
+        );
+
+        // Draw bottom gradient (middle to bottom) - like painting the lower sky! 🎨
+        this.#skyGradient.fillGradientStyle(
+            currentPalette.middle, // Top left
+            currentPalette.middle, // Top right
+            currentPalette.bottom, // Bottom left
+            currentPalette.bottom, // Bottom right
+            1,  // Alpha
+        );
+        this.#skyGradient.fillRect(
+            bounds.x - 5,
+            bounds.y + (bounds.height / 2),
+            bounds.width,
+            bounds.height / 2,
+        );
     }
 
     /**
@@ -480,10 +597,13 @@ export class SkySystem {
 
     /**
      * Updates our sky gradient with current colours
+     *
+     * @param {number} width - The width of the game
+     * @param {number} height - The height of the game
      */
-    #updateSkyGradient() {
-        const width = this.#scene.scale.width;
-        const height = this.#scene.scale.height;
+    /* #updateSkyGradient(width = this.#initialSceneWidth, height = this.#initialSceneHeight) {
+        const paddedWidth = width + (this.#cameraPadding.x * 2);
+        const paddedHeight = height + (this.#cameraPadding.y * 4);
         const currentPalette = this.#getCurrentPalette();
 
         this.#skyGradient.clear();
@@ -497,7 +617,7 @@ export class SkySystem {
             currentPalette.middle, // Bottom right
             1,  // Alpha
         );
-        this.#skyGradient.fillRect(0, 0, width, height / 2);
+        this.#skyGradient.fillRect(-this.#cameraPadding.x, -(this.#cameraPadding.y * 3), paddedWidth, paddedHeight / 2);
 
         // Second gradient: middle to bottom
         this.#skyGradient.fillGradientStyle(
@@ -507,8 +627,8 @@ export class SkySystem {
             currentPalette.bottom, // Bottom right
             1,  // Alpha
         );
-        this.#skyGradient.fillRect(0, height / 2, width, height / 2);
-    }
+        this.#skyGradient.fillRect(-this.#cameraPadding.x, -(this.#cameraPadding.y * 3) + (paddedHeight / 2), paddedWidth, paddedHeight / 2);
+    } */
 
     /**
      * Updates the lighting based on time of day
@@ -1028,15 +1148,16 @@ export class SkySystem {
     }
 
     /**
-     * Updates the sky system each frame
+     * Updates the sky system! ☀️
      *
-     * @param {number} delta - Time since last update in milliseconds
      * @param {number} time - Current game time in milliseconds
+     * @param {number} delta - Time since last update in milliseconds, adjusted for slow motion
      */
-    update(delta, time) {
-        // Update time of day (complete cycle every 2 minutes)
-        this.#timeOfDay = (this.#timeOfDay + (delta / 200000)) % 1;
+    update(time, delta) {
+        // Update time of day using the provided delta which already accounts for slow motion
+        this.#timeOfDay = (this.#timeOfDay + (delta / SkySystem.DAY_NIGHT_CYCLE_DURATION)) % 1;
 
+        // Update sky gradient and effects
         this.#updateSkyGradient();
         this.#updateLighting();
         this.#updateStars(time);
@@ -1075,5 +1196,32 @@ export class SkySystem {
         this.#stars = [];
         this.#auroraWaves = [];
         this.#clouds = [];
+    }
+
+    /**
+     * Gets all the sky elements that need to be registered with the camera 🎥
+     *
+     * @returns {Phaser.GameObjects.GameObject[]} Array of sky elements
+     */
+    getSkyElements() {
+        const elements = [];
+
+        if (this.#skyGradient) {
+            elements.push(this.#skyGradient);
+        }
+        if (this.#lighting) {
+            elements.push(this.#lighting);
+        }
+        if (this.#starContainer) {
+            elements.push(this.#starContainer);
+        }
+        if (this.#auroraGraphics) {
+            elements.push(this.#auroraGraphics);
+        }
+        if (this.#cloudGraphics) {
+            elements.push(this.#cloudGraphics);
+        }
+
+        return elements;
     }
 }

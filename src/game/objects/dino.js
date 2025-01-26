@@ -46,6 +46,9 @@ export class Dino extends Phaser.GameObjects.Sprite {
     /** @type {boolean} */
     #wasInAir = false;
 
+    /** @type {boolean} */
+    #isSlowMotion = false;
+
     /** @type {Object} */
     #keys;
 
@@ -73,6 +76,9 @@ export class Dino extends Phaser.GameObjects.Sprite {
     /** @type {boolean} */
     #justDoubleJumped = false;
 
+    /** @type {CameraManager} */
+    #cameraManager;
+
     /**
      * Creates our lovable dino character! 🦖
      *
@@ -82,6 +88,9 @@ export class Dino extends Phaser.GameObjects.Sprite {
      */
     constructor(scene, x, y) {
         super(scene, x, y, 'dino-sprites', 'idle-1');
+
+        // Get camera manager reference
+        this.#cameraManager = scene.getCameraManager();
 
         // Set up the dino's size and origin
         this.setOrigin(0.5, 1);
@@ -118,6 +127,125 @@ export class Dino extends Phaser.GameObjects.Sprite {
 
         // Listen for animation complete
         this.on('animationcomplete', this.#onAnimationComplete, this);
+    }
+
+    /**
+     * Updates the dino's position and handles input
+     * This runs every frame of the game! 🎮
+     *
+     * @param {number} _time - The current time
+     * @param {number} _delta - The time since the last frame in milliseconds
+     */
+    update(_time, _delta) {
+        /** @type {Phaser.Physics.Arcade.Body} */
+        const body = this.body;
+        const wasJumping = this.#isJumping;
+        const wasTouchingGround = body.touching.down;
+
+        // Update jumping state
+        this.#isJumping = !body.touching.down;
+
+        // Check if we landed
+        if (wasTouchingGround) {
+            if (!wasJumping) {
+                // Reset jumps when touching ground
+                this.#remainingJumps = Dino.MAX_JUMPS;
+            }
+            else {
+                // Just landed
+                this.land();
+            }
+        }
+
+        // Update input states
+        const jumpPressed = (this.#keys.UP.isDown || this.#keys.SPACE.isDown) // Keyboard
+                          || this.#activeJumpPointers.size > 0; // Mobile
+        const jumpPressedState = this.#isMobile ? '#touchJumpPressed' : '#keyJumpPressed';
+
+        const duckPressed = (this.#keys.DOWN.isDown || this.#keys.CTRL.isDown) // Keyboard
+                          || this.#activeDuckPointers.size > 0; // Mobile
+
+        // Handle jump
+        if (jumpPressed && !this.#isDucking && this.#remainingJumps > 0) {
+            if (!this[jumpPressedState]) {
+                this[jumpPressedState] = true;
+
+                this.jump();
+            }
+        }
+        else {
+            this[jumpPressedState] = false;
+        }
+
+        // Handle duck
+        if (duckPressed) {
+            if (!this.#isDucking) {
+                this.duck();
+                this.#cameraManager.playDuckEffect(this.#isJumping);
+            }
+        }
+        else if (this.#isDucking) {
+            this.standUp();
+        }
+
+        // Update animations
+        this.#updateAnimations(wasJumping);
+    }
+
+    /**
+     * Makes our dino land gracefully! 🦖
+     */
+    land() {
+        if (this.#wasInAir) {
+            this.#wasInAir = false;
+            this.#cameraManager.playLandEffect();
+
+            // Reset slow motion if we were ducking when we landed
+            if (this.#isDucking) {
+                this.#cameraManager.resetDuckEffect(false, true);
+            }
+        }
+    }
+
+    /**
+     * Updates the dino's animations based on its current state
+     * Like a puppeteer pulling the right strings! 🎭
+     *
+     * @param {boolean} wasJumping - Whether the dino was jumping in the previous frame
+     */
+    #updateAnimations(wasJumping) {
+        if (this.#isJumping) {
+            // If we just started jumping or just performed a double jump
+            if (!wasJumping || this.#justDoubleJumped) {
+                this.play('dino-jump-up');
+                this.#justDoubleJumped = false;
+            }
+
+            // Hold the peak frame once the jump-up animation completes
+            else if (this.anims.currentAnim?.key === 'dino-jump-up' && !this.anims.isPlaying) {
+                this.setFrame('jump-3');
+            }
+            this.#wasInAir = true;
+
+            // If ducking while jumping, pause the animation
+            if (this.#isDucking) {
+                this.play('dino-duck', true);
+                this.anims.pause();
+            }
+        }
+        else if (this.#wasInAir) {
+            // Just landed
+            this.play('dino-jump-land');
+            this.#wasInAir = false;
+        }
+        else if (this.#isDucking) {
+            // Ducking
+            this.play('dino-duck', true);
+        }
+        else {
+            // Running
+            this.play('dino-run', true);
+        }
     }
 
     /**
@@ -200,114 +328,8 @@ export class Dino extends Phaser.GameObjects.Sprite {
         if (this.#jumpButton) {
             this.#jumpButton.setPosition(padding, gameSize.height - padding);
         }
-
         if (this.#duckButton) {
             this.#duckButton.setPosition(gameSize.width - padding, gameSize.height - padding);
-        }
-    }
-
-    /**
-     * Updates the dino's position and handles input
-     * This runs every frame of the game! 🎮
-     */
-    update() {
-        /** @type {Phaser.Physics.Arcade.Body} */
-        const body = this.body;
-        const wasJumping = this.#isJumping;
-        const wasTouchingGround = body.touching.down;
-
-        // Update jumping state
-        this.#isJumping = !body.touching.down;
-
-        // Reset jumps when touching ground
-        if (wasTouchingGround && !wasJumping) {
-            this.#remainingJumps = Dino.MAX_JUMPS;
-        }
-
-        // Handle keyboard controls
-        if ((this.#keys.UP.isDown || this.#keys.SPACE.isDown) && !this.#keyJumpPressed && this.#remainingJumps > 0) {
-            this.jump();
-            this.#keyJumpPressed = true;
-        }
-        else if (!(this.#keys.UP.isDown || this.#keys.SPACE.isDown)) {
-            this.#keyJumpPressed = false;
-        }
-
-        if (this.#keys.DOWN.isDown || this.#keys.CTRL.isDown) {
-            this.duck();
-        }
-        else if (this.#activeDuckPointers.size === 0 && this.#isDucking) {
-            this.stand();
-        }
-
-        // Handle mobile controls
-        if (this.#isMobile) {
-            if (this.#activeJumpPointers.size > 0 && !this.#touchJumpPressed && this.#remainingJumps > 0) {
-                this.jump();
-                this.#touchJumpPressed = true;
-            }
-            else if (this.#activeJumpPointers.size === 0) {
-                this.#touchJumpPressed = false;
-            }
-
-            if (this.#activeDuckPointers.size > 0) {
-                this.duck();
-            }
-        }
-
-        // Update animations
-        this.#updateAnimations(wasJumping);
-    }
-
-    /**
-     * Updates the dino's animations based on its current state
-     * Like a puppeteer pulling the right strings! 🎭
-     *
-     * @param {boolean} wasJumping - Whether the dino was jumping in the previous frame
-     */
-    #updateAnimations(wasJumping) {
-        if (this.#isJumping) {
-            // If we just started jumping or just performed a double jump
-            if (!wasJumping || this.#justDoubleJumped) {
-                this.play('dino-jump-up');
-                this.#justDoubleJumped = false;
-            }
-
-            // Hold the peak frame once the jump-up animation completes
-            else if (this.anims.currentAnim?.key === 'dino-jump-up' && !this.anims.isPlaying) {
-                this.setFrame('jump-3');
-            }
-            this.#wasInAir = true;
-
-            // If ducking while jumping, pause the animation
-            if (this.#isDucking) {
-                this.anims.pause();
-            }
-        }
-        else if (this.#wasInAir) {
-            // Just landed
-            this.play('dino-jump-land');
-            this.#wasInAir = false;
-        }
-        else if (this.#isDucking) {
-            // Ducking
-            this.play('dino-duck', true);
-        }
-        else {
-            // Running
-            this.play('dino-run', true);
-        }
-    }
-
-    /**
-     * Handles animation complete events
-     *
-     * @param {Phaser.Animations.Animation} animation - The animation that completed
-     * @param {Phaser.Animations.AnimationFrame} _frame - The final animation frame
-     */
-    #onAnimationComplete(animation, _frame) {
-        if (animation.key === 'dino-jump-land') {
-            this.play('dino-run', true);
         }
     }
 
@@ -425,17 +447,18 @@ export class Dino extends Phaser.GameObjects.Sprite {
         if (!this.#isDucking) {
             this.#isDucking = true;
             this.#updateHitbox(true);
-            this.play('dino-duck', true);
+            this.#cameraManager.playDuckEffect(this.#isJumping);
         }
     }
 
     /**
      * Makes the dino stand back up 🦖
      */
-    stand() {
+    standUp() {
         if (this.#isDucking) {
             this.#isDucking = false;
             this.#updateHitbox(false);
+            this.#cameraManager.resetDuckEffect(this.#isJumping);
         }
     }
 
@@ -494,12 +517,7 @@ export class Dino extends Phaser.GameObjects.Sprite {
         this.body.setVelocityY(0);
 
         // Hide mobile controls
-        if (this.#jumpButton) {
-            this.#jumpButton.setVisible(false);
-        }
-        if (this.#duckButton) {
-            this.#duckButton.setVisible(false);
-        }
+        this.toggleButtonVisibility();
     }
 
     /**
@@ -509,12 +527,7 @@ export class Dino extends Phaser.GameObjects.Sprite {
         this.anims.resume();
 
         // Show mobile controls
-        if (this.#jumpButton) {
-            this.#jumpButton.setVisible(true);
-        }
-        if (this.#duckButton) {
-            this.#duckButton.setVisible(true);
-        }
+        this.toggleButtonVisibility();
     }
 
     /**
@@ -527,5 +540,46 @@ export class Dino extends Phaser.GameObjects.Sprite {
         if (this.#duckButton) {
             this.#duckButton.setVisible(!this.#duckButton.visible);
         }
+    }
+
+    /**
+     * Gets the mobile control buttons for UI camera
+     *
+     * @returns {Array<Phaser.GameObjects.Sprite>} Array of mobile control buttons
+     */
+    getMobileControls() {
+        if (!this.#isMobile) {
+            return null;
+        }
+
+        return [this.#jumpButton, this.#duckButton];
+    }
+
+    /**
+     * Handles animation complete events
+     *
+     * @param {Phaser.Animations.Animation} animation - The animation that completed
+     * @param {Phaser.Animations.AnimationFrame} _frame - The final animation frame
+     */
+    #onAnimationComplete(animation, _frame) {
+        if (animation.key === 'dino-jump-land') {
+            this.play('dino-run', true);
+        }
+    }
+
+    /**
+     * Enable slow motion
+     */
+    enableSlowMotion() {
+        this.#isSlowMotion = true;
+        this.anims.speed = 0.5;
+    }
+
+    /**
+     * Disable slow motion
+     */
+    disableSlowMotion() {
+        this.#isSlowMotion = false;
+        this.anims.speed = 1;
     }
 }

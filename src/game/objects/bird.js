@@ -13,9 +13,9 @@ export class Bird extends Phaser.GameObjects.Sprite {
     static HEIGHT = 32;
 
     /** @type {{min: number, max: number}} */
-    static SPEED_RANGE = {
+    static BASE_SPEED_RANGE = {
         min: -450,  // Faster birds
-        max: -320,  // Slower birds
+        max: -350,  // Slower birds
     };
 
     /** @type {number[]} */
@@ -24,15 +24,18 @@ export class Bird extends Phaser.GameObjects.Sprite {
     /** @type {number} */
     #originalVelocityX;
 
+    /** @type {number} */
+    #baseSpeed;
+
     /**
      * Creates a new bird enemy! 🦅
      *
      * @param {Phaser.Scene} scene - The scene that owns this bird
      * @param {number} x - The bird's starting x position
      * @param {number} y - The bird's starting y position
-     * @param {number} speed - The bird's horizontal speed
+     * @param {number} gameSpeed - The current game speed
      */
-    constructor(scene, x, y, speed) {
+    constructor(scene, x, y, gameSpeed) {
         super(scene, x, y, 'bird-sprites');
 
         // Set depth above sky,stars,etc but below lighting and ui
@@ -42,11 +45,20 @@ export class Bird extends Phaser.GameObjects.Sprite {
         scene.add.existing(this);
         scene.physics.add.existing(this);
 
+        // Calculate scaled speed range based on game speed
+        const speedScale = gameSpeed / 280; // Normalise by base game speed
+        const scaledMin = Bird.BASE_SPEED_RANGE.min * speedScale;
+        const scaledMax = Bird.BASE_SPEED_RANGE.max * speedScale;
+
+        // Set random speed within scaled range
+        this.#baseSpeed = Phaser.Math.Between(scaledMin, scaledMax);
+        this.#originalVelocityX = this.#baseSpeed;
+
         // Set up physics body
         /** @type {Phaser.Physics.Arcade.Body} */
         const body = this.body;
         body.setSize(Bird.WIDTH, Bird.HEIGHT);
-        body.setVelocityX(speed);
+        body.setVelocityX(this.#baseSpeed);
         body.setAllowGravity(false);
 
         // Create flying animation if it doesn't exist
@@ -72,8 +84,6 @@ export class Bird extends Phaser.GameObjects.Sprite {
             callbackScope: this,
             loop: true,
         });
-
-        this.#originalVelocityX = 0;
     }
 
     /**
@@ -103,18 +113,32 @@ export class Bird extends Phaser.GameObjects.Sprite {
     }
 
     /**
+     * Updates the bird's speed! 🏃‍♂️
+     *
+     * @param {number} gameSpeed - The current game speed
+     */
+    setSpeed(gameSpeed) {
+        const speedScale = gameSpeed / 280; // Normalize by base game speed
+        const newSpeed = this.#originalVelocityX * speedScale;
+
+        /** @type {Phaser.Physics.Arcade.Body} */
+        const body = this.body;
+        body.setVelocityX(newSpeed);
+    }
+
+    /**
      * Creates a new bird at a random height above the ground
      *
      * @param {Phaser.Scene} scene - The scene to spawn the bird in
+     * @param {number} gameSpeed - The current game speed
      * @returns {Bird} The newly created bird
      */
-    static spawn(scene) {
+    static spawn(scene, gameSpeed) {
         const gameWidth = scene.scale.width;
         const groundY = scene.scale.height - 30; // Ground level
         const heightAboveGround = Phaser.Math.RND.pick(Bird.SPAWN_HEIGHTS);
         const spawnY = groundY - heightAboveGround;
-        const speed = Phaser.Math.Between(Bird.SPEED_RANGE.min, Bird.SPEED_RANGE.max);
 
-        return new Bird(scene, gameWidth + Bird.WIDTH, spawnY, speed);
+        return new Bird(scene, gameWidth + Bird.WIDTH, spawnY, gameSpeed);
     }
 }

@@ -10,7 +10,7 @@ export class DifficultyManager {
     #currentLevel = 1;
 
     /** @type {number} */
-    #maxLevel = 20;
+    #maxLevel = 50;
 
     /** @type {number} */
     #scoreThreshold = 80;
@@ -19,10 +19,7 @@ export class DifficultyManager {
     #baseSpeed = 280;
 
     /** @type {number} */
-    #speedIncrement = 35;
-
-    /** @type {number} */
-    #baseSpawnRate = 1.0;
+    #speedIncrement = 15;
 
     /** @type {number} */
     #spawnRateMultiplier = 0.9;
@@ -74,6 +71,15 @@ export class DifficultyManager {
      */
     getCurrentLevel() {
         return this.#currentLevel;
+    }
+
+    /**
+     * Gets the maximum difficulty level
+     *
+     * @returns {number} Max level
+     */
+    getMaxLevel() {
+        return this.#maxLevel;
     }
 
     /**

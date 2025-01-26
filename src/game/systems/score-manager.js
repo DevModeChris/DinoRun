@@ -10,6 +10,9 @@ export class ScoreManager {
     /** @type {number} */
     #highScore = 0;
 
+    /** @type {number} */
+    #accumulatedTime = 0;
+
     /** @type {Phaser.GameObjects.Text} */
     #currentScoreText;
 
@@ -126,7 +129,9 @@ export class ScoreManager {
      */
     reset() {
         this.#currentScore = 0;
-        this.#currentScoreText.setText(`Score: ${this.#currentScore}m`);
+        this.#accumulatedTime = 0;
+        this.#currentScoreText.setText('Score: 0m');
+        this.#updateScorePosition();
     }
 
     /**
@@ -172,5 +177,42 @@ export class ScoreManager {
     toggleScoreTextVisibility() {
         this.#highScoreText.setVisible(!this.#highScoreText.visible);
         this.#currentScoreText.setVisible(!this.#currentScoreText.visible);
+    }
+
+    /**
+     * Gets the text elements for UI camera
+     *
+     * @returns {Phaser.GameObjects.Text[]} Array of score text elements
+     */
+    getScoreTextElms() {
+        return [this.#currentScoreText, this.#highScoreText].filter((text) => text !== undefined);
+    }
+
+    /**
+     * Updates the score based on time played
+     * The longer you survive, the higher your score! 🏆
+     *
+     * @param {number} _time - The current time
+     * @param {number} delta - The delta time in ms since the last frame
+     */
+    update(_time, delta) {
+        // Accumulate time played (using delta to account for game speed)
+        this.#accumulatedTime += delta;
+
+        // Update score (1 point per 200ms of scaled time)
+        const newScore = Math.floor(this.#accumulatedTime / 200);
+
+        if (newScore !== this.#currentScore) {
+            this.#currentScore = newScore;
+            this.#currentScoreText.setText(`Score: ${this.#currentScore}m`);
+            this.#updateScorePosition();
+
+            // Check for new high score
+            if (this.#currentScore > this.#highScore) {
+                this.#highScore = this.#currentScore;
+                this.#highScoreText.setText(`Best: ${this.#highScore}m`);
+                this.#saveHighScore();
+            }
+        }
     }
 }

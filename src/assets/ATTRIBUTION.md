@@ -5,12 +5,14 @@ Please respect the individual licenses and attribution requirements for each ass
 
 ## Audio
 
-N/A
+### Loopable Background Music
+- **Creator:** jhaeka
+- **Source:** https://joshuuu.itch.io/short-loopable-background-music
+- **License:** Creative Commons Zero (CC0) | Free for personal and commercial use
 
 ## Fonts
 
 ### Annie Use Your Telescope
-- **Asset:** Annie Use Your Telescope
 - **Creator:** Kimberly Geswein
 - **Source:** https://fonts.google.com/specimen/Annie+Use+Your+Telescope
 - **License:** SIL Open Font License v1.1 | Free for personal and commercial use

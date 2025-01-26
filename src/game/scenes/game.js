@@ -9,9 +9,10 @@ import { Ground } from '../objects/ground.js';
 import { Dino } from '../objects/dino.js';
 import { Bird } from '../objects/bird.js';
 import { SmallRock } from '../objects/small-rock.js';
-import { SkySystem } from '../objects/sky-system.js';
+import { SkySystem } from '../systems/sky-system.js';
 import { ScoreManager } from '../systems/score-manager.js';
 import { DifficultyManager } from '../systems/difficulty-manager.js';
+import { CameraManager } from '../systems/camera-manager.js';
 import { checkIfMobile } from '../../utils/helpers.js';
 import {
     gameConfig,
@@ -19,7 +20,7 @@ import {
     BASE_HEIGHT,
 } from '../config.js';
 
-export class GameScene extends Phaser.Scene {
+export class Game extends Phaser.Scene {
     /** @type {boolean} */
     #isGameOver = false;
 
@@ -40,6 +41,9 @@ export class GameScene extends Phaser.Scene {
 
     /** @type {DifficultyManager} */
     #difficultyManager;
+
+    /** @type {CameraManager} */
+    #cameraManager;
 
     /** @type {Phaser.GameObjects.Rectangle} */
     #platform;
@@ -64,12 +68,6 @@ export class GameScene extends Phaser.Scene {
 
     /** @type {boolean} */
     #debugMode = false;
-
-    /** @type {number} */
-    #lastScoreUpdate = 0;
-
-    /** @type {number} */
-    #scoreUpdateInterval = 100; // Update score every 100ms
 
     /** @type {number} */
     #dinoX = 100;
@@ -108,7 +106,7 @@ export class GameScene extends Phaser.Scene {
     #isFullscreen = false;
 
     constructor() {
-        super('GameScene');
+        super('Game');
     }
 
     /**
@@ -136,6 +134,9 @@ export class GameScene extends Phaser.Scene {
     create() {
         const { width, height } = this.scale;
 
+        // Create camera manager before other game objects
+        this.#cameraManager = new CameraManager(this);
+
         // Check if we're on mobile
         this.#isMobile = checkIfMobile();
 
@@ -158,10 +159,13 @@ export class GameScene extends Phaser.Scene {
         // Create difficulty manager
         this.#difficultyManager = new DifficultyManager();
 
-        // Create a group for all enemies
-        this.#enemies = this.add.group();
+        // Create enemy group with physics
+        this.#enemies = this.add.group({
+            classType: Phaser.GameObjects.Sprite,
+            runChildUpdate: true,
+        });
 
-        // Start spawning enemies with randomized initial setup
+        // Start spawning enemies with randomised initial setup
         this.time.delayedCall(2000, () => {
             // Randomly choose which enemy type spawns first
             const spawnFirst = Math.random() < 0.5 ? 'bird' : 'rock';
@@ -201,6 +205,19 @@ export class GameScene extends Phaser.Scene {
         this.#createButtonsUI();
         this.#createPauseOverlay();
 
+        // Register with the camera manager as a game element
+        this.#cameraManager.registerGameElement(this.#dino);
+        this.#cameraManager.registerGameElement(this.#ground);
+        this.#cameraManager.registerGameElement(this.#platform);
+
+        // Register sky system components
+        if (this.#skySystem) {
+            const skyElements = this.#skySystem.getSkyElements();
+            skyElements.forEach((element) => {
+                this.#cameraManager.registerGameElement(element);
+            });
+        }
+
         // Set up collision detection
         this.physics.add.overlap(
             this.#dino,
@@ -221,7 +238,13 @@ export class GameScene extends Phaser.Scene {
                     height / BASE_HEIGHT,
                 );
 
+        // Add all UI elements to the UI camera
+        this.#addUIElementsToCamera();
+
         this.#calculatePositions(width, height, scale);
+
+        // Make the main camera follow the dino
+        this.#cameraManager.cameraFollow(this.#dino);
 
         // Set up debug controls
         const keys = this.input.keyboard.addKeys('TAB,P');
@@ -230,7 +253,19 @@ export class GameScene extends Phaser.Scene {
 
         // Enable debug mode to see collision boxes
         this.physics.world.createDebugGraphic();
-        this.physics.world.debugGraphic.visible = this.#debugMode;
+        const debugGraphic = this.physics.world.debugGraphic;
+        debugGraphic.visible = this.#debugMode;
+
+        // Enable debug text if debug mode is active
+        if (this.#debugMode) {
+            this.#debugText.setVisible(this.#debugMode);
+            this.#debugText.background.setVisible(this.#debugMode);
+        }
+
+        // Register debug graphics with main camera only
+        if (debugGraphic) {
+            this.#cameraManager.registerGameElement(debugGraphic);
+        }
     }
 
     /**
@@ -386,15 +421,10 @@ export class GameScene extends Phaser.Scene {
             scale = Math.max(width / BASE_WIDTH, 0.85);
         }
         else {
-            // In landscape, handle mobile and desktop differently
-            if (this.#isMobile) {
-                // For mobile landscape, use height-based scale with a higher minimum
-                scale = Math.max(height / (BASE_HEIGHT / 2), 0.85);
-            }
-            else {
-                // For desktop landscape, use the smaller ratio to prevent oversizing
-                scale = Math.min(width / BASE_WIDTH, height / BASE_HEIGHT);
-            }
+            // Handle mobile and desktop differently in landscape mode
+            scale = this.#isMobile
+                ? Math.max(height / (BASE_HEIGHT / 2), 0.85)  // Mobile: height-based scale with higher minimum
+                : Math.min(width / BASE_WIDTH, height / BASE_HEIGHT);  // Desktop: smaller ratio to prevent oversizing
         }
 
         // Update all positions and scales
@@ -409,6 +439,9 @@ export class GameScene extends Phaser.Scene {
      * @param {number} [scale=1] - Scale factor for sizing objects
      */
     #calculatePositions(width, height, scale = 1) {
+        // Get camera padding if available
+        const padding = this.#cameraManager?.cameraPadding || { x: 0, y: 0 };
+
         // Calculate ground dimensions first - these are our reference points
         const groundHeight = Math.ceil(Ground.HEIGHT * scale);
         const groundCollisionHeight = Math.ceil(Ground.COLLISION_HEIGHT * scale);
@@ -422,26 +455,28 @@ export class GameScene extends Phaser.Scene {
         this.#groundY = groundTopY;
         this.#groundCollisionHeight = groundCollisionHeight;
 
-        // Update ground
+        // Update ground - extend width to cover padded area
         if (this.#ground) {
-            // Set ground scale and position (origin is bottom-left)
             this.#ground.setScale(scale);
             this.#ground.y = groundY;
-            this.#ground.width = width * 2;
+
+            // Make ground wider than camera bounds to prevent edges showing
+            this.#ground.width = width + (padding.x * 4); // Extra wide to account for scrolling
+            this.#ground.x = -padding.x * 2; // Center the extra width
         }
 
-        // Update platform
+        // Update platform - extend width to cover padded area
         if (this.#platform && this.#platform.body) {
-            // Position platform at collision height from bottom
             const platformY = groundCollisionY + (groundCollisionHeight / 2);
+            const platformWidth = width + (padding.x * 2); // Match camera bounds
 
             this.#platform.setPosition(Math.ceil(width / 2), platformY);
-            this.#platform.width = width;
+            this.#platform.width = platformWidth;
 
             // Update platform physics body
             /** @type {Phaser.Physics.Arcade.StaticBody} */
             const body = this.#platform.body;
-            body.setSize(width, groundCollisionHeight);
+            body.setSize(platformWidth, groundCollisionHeight);
             body.updateFromGameObject();
         }
 
@@ -469,12 +504,6 @@ export class GameScene extends Phaser.Scene {
         if (this.#enemies) {
             this.#enemies.getChildren().forEach((enemy) => {
                 enemy.setScale(scale);
-                if (enemy instanceof Bird) {
-                    enemy.y = groundTopY - (100 * scale);
-                }
-                else {
-                    enemy.y = groundCollisionY;
-                }
             });
         }
 
@@ -548,14 +577,52 @@ export class GameScene extends Phaser.Scene {
     }
 
     /**
-     * Creates the debug text overlay
+     * Like organizing all our HUD elements! 📊
+     */
+    #addUIElementsToCamera() {
+        // Create an array of all UI elements
+        const uiElements = [
+            this.#scoreManager.getScoreTextElms(),
+            this.#gameOverText,
+            this.#debugText,
+            this.#pauseOverlay,
+            this.#pauseHeader,
+            this.#pauseButton,
+            this.#fullscreenButton,
+        ].filter(Boolean); // Remove any null/undefined elements
+
+        // Add each UI element to the UI camera if it exists
+        uiElements.forEach((element) => {
+            if (element) {
+                if (element instanceof Phaser.GameObjects.Container) {
+                    // For containers like pauseOverlay, add all its children
+                    element.getAll().forEach((child) => {
+                        this.#cameraManager.registerUIElement(child);
+                    });
+                }
+
+                this.#cameraManager.registerUIElement(element);
+            }
+        });
+
+        // Add mobile controls if they exist
+        if (this.#dino) {
+            const mobileControls = this.#dino.getMobileControls();
+            if (mobileControls) {
+                this.#cameraManager.registerUIElement(mobileControls);
+            }
+        }
+    }
+
+    /**
+     * Creates debug text display (hidden initially)
      */
     #createDebugText() {
         const padding = 4;
         const buffer = 4;
 
-        // Create debug text with default styling
-        this.#debugText = this.add.text(16, 76, '', {
+        // Create debug textarea
+        this.#debugText = this.add.text(16, 86, '', {
             fontFamily: 'monospace',
             fontSize: '13px',
             fill: '#ffffff',
@@ -565,17 +632,16 @@ export class GameScene extends Phaser.Scene {
         })
             .setScrollFactor(0)
             .setDepth(1000)
-            .setVisible(false)
-            .setPipeline('TextureTintPipeline');  // Use pixel art pipeline
+            .setVisible(false);
 
         // Create background for dynamic sizing
         this.#debugText.background = this.add.rectangle(
             16 - padding - buffer,
-            76 - padding - buffer,
-            0,  // Initial width will be set dynamically
-            0,  // Initial height will be set dynamically
+            86 - padding - buffer,
+            0, // Initial width will be set dynamically
+            0, // Initial height will be set dynamically
             0x000000,
-            0.7,
+            0.4,
         )
             .setOrigin(0, 0)
             .setScrollFactor(0)
@@ -587,6 +653,33 @@ export class GameScene extends Phaser.Scene {
             this.#debugText.background.width = this.#debugText.width + (padding * 2) + (buffer * 2);
             this.#debugText.background.height = this.#debugText.height + (padding * 2) + (buffer * 2);
         };
+
+        // Register debug text with UI camera
+        this.#cameraManager.registerUIElement(this.#debugText);
+        this.#cameraManager.registerUIElement(this.#debugText.background);
+    }
+
+    /**
+     * Updates debug text with current game state
+     */
+    #updateDebugText() {
+        if (!this.#debugText || !this.#debugMode) {
+            return;
+        }
+
+        const timeOfDay = this.#skySystem.getTimeOfDay();
+        const hours = Math.floor(timeOfDay * 24);
+        const minutes = Math.floor((timeOfDay * 24 * 60) % 60);
+
+        const debugInfo = [
+            `FPS: ${Math.round(this.game.loop.actualFps)}`,
+            `Time: ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`,
+            `Level: ${this.#difficultyManager.getCurrentLevel()}/${this.#difficultyManager.getMaxLevel()} (s: ${this.#difficultyManager.getCurrentSpeed()})`,
+            `Enemies: ${this.#enemies.getLength()}`,
+        ].join('\n');
+
+        this.#debugText.setText(debugInfo);
+        this.#debugText.resizeBackground();
     }
 
     /**
@@ -740,6 +833,24 @@ export class GameScene extends Phaser.Scene {
     }
 
     /**
+     * Toggles debug mode on/off 🐛
+     */
+    #toggleDebugMode() {
+        this.#debugMode = !this.#debugMode;
+
+        // Toggle debug graphics visibility
+        if (this.physics.world.debugGraphic) {
+            this.physics.world.debugGraphic.visible = this.#debugMode;
+        }
+
+        // Toggle debug text visibility
+        if (this.#debugText) {
+            this.#debugText.setVisible(this.#debugMode);
+            this.#debugText.background.setVisible(this.#debugMode);
+        }
+    }
+
+    /**
      * Starts spawning enemies of a specific type
      *
      * @param {string} type - Type of enemy to spawn
@@ -811,20 +922,17 @@ export class GameScene extends Phaser.Scene {
             return null;
         }
 
-        // Get a random speed from the bird's speed range
-        const baseSpeed = Phaser.Math.Between(Bird.SPEED_RANGE.min, Bird.SPEED_RANGE.max);
+        // Get current game speed
+        const gameSpeed = this.#difficultyManager.getCurrentSpeed();
 
-        // Scale the speed based on current difficulty (each level adds 5% more speed)
-        const speedMultiplier = 1 + ((this.#difficultyManager.getCurrentLevel() - 1) * 0.05);
-        const finalSpeed = baseSpeed * speedMultiplier;
+        // Create a new bird and add it to the enemy group
+        const bird = Bird.spawn(this, gameSpeed);
 
-        // Spawn bird with scaled random speed
-        return new Bird(
-            this,
-            this.scale.width + 100,
-            Phaser.Math.Between(100, this.scale.height - 200),
-            finalSpeed,
-        );
+        // Register with camera manager before adding to group
+        this.#cameraManager.registerGameElement(bird);
+        this.#enemies.add(bird);
+
+        return bird;
     }
 
     /**
@@ -838,19 +946,24 @@ export class GameScene extends Phaser.Scene {
         }
 
         // Spawn rock offscreen to the right
-        return new SmallRock(
+        const rock = new SmallRock(
             this,
             this.scale.width + 100, // Start off-screen to the right
             this.scale.height - this.#groundCollisionHeight,
             this.#difficultyManager.getCurrentSpeed(), // Pass current speed for reference
         );
+
+        // Register with camera manager before adding to group
+        this.#cameraManager.registerGameElement(rock);
+
+        return rock;
     }
 
     /**
      * Called every frame to update game objects
      *
      * @param {number} time - The current time in milliseconds
-     * @param {number} delta - The time in milliseconds since the last update
+     * @param {number} delta - The delta time in milliseconds since the last update
      */
     update(time, delta) {
         // Don't update game objects if game over
@@ -872,61 +985,44 @@ export class GameScene extends Phaser.Scene {
             return;
         }
 
+        // Get time scales
+        const slowMotionScale = this.anims.globalTimeScale;
+        const gameSpeed = this.#difficultyManager.getCurrentSpeed() / 280; // Normalize by base speed
+        const slowMotionDelta = delta * slowMotionScale;
+        const gameSpeedDelta = slowMotionDelta * gameSpeed;
+
         // Update dino (handles keyboard and mobile controls)
         this.#dino.update();
 
-        // Update our magical sky ✨
-        this.#skySystem.update(delta, time);
+        // Update our magical sky ✨ (affected by slow motion but not game speed)
+        this.#skySystem.update(time, slowMotionDelta);
+
+        // Update score and difficulty (affected by both slow motion and game speed)
+        this.#scoreManager.update(time, gameSpeedDelta);
+        const score = this.#scoreManager.getCurrentScore();
+        if (this.#difficultyManager.update(score)) {
+            // Adjust spawn rates
+            this.#updateSpawnRates();
+        }
 
         // Update debug text if enabled
-        if (this.#debugMode) {
-            const timeOfDay = this.#skySystem.getTimeOfDay();
-            const hours = Math.floor(timeOfDay * 24);
-            const minutes = Math.floor((timeOfDay * 24 * 60) % 60);
-            this.#debugText.setText(`🕒 Time: ${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`);
-            this.#debugText.resizeBackground();
-            this.#debugText.setVisible(true);
-            this.#debugText.background.setVisible(true);
-        }
-        else {
-            this.#debugText.setVisible(false);
-            this.#debugText.background.setVisible(false);
-        }
+        this.#updateDebugText();
 
         // Handle debug toggle with key state tracking
         if (this.#debugKey.isDown && !this.#debugKeyPressed) {
             this.#debugKeyPressed = true;
-            this.#debugMode = !this.#debugMode;
-            this.physics.world.debugGraphic.setVisible(this.#debugMode);
-
-            // Log debug state
-            console.log(`Debug mode: ${this.#debugMode ? 'ON' : 'OFF'}`);
+            this.#toggleDebugMode();
         }
         else if (!this.#debugKey.isDown) {
             this.#debugKeyPressed = false;
         }
 
-        // Update score based on time survived
-        if (time - this.#lastScoreUpdate >= this.#scoreUpdateInterval) {
-            this.#scoreManager.addScore(1);
-            this.#lastScoreUpdate = time;
+        // Update ground scrolling with game speed
+        this.#ground.update(gameSpeedDelta);
 
-            // Update difficulty based on score
-            if (this.#difficultyManager.update(this.#scoreManager.getCurrentScore())) {
-                // Speed up ground scrolling
-                this.#ground.setScrollSpeed(this.#difficultyManager.getCurrentSpeed());
-
-                // Adjust spawn rates
-                this.#updateSpawnRates();
-            }
-        }
-
-        // Update ground scrolling
-        this.#ground.update(delta);
-
-        // Update all enemies
+        // Update all enemies with game speed
         this.#enemies.getChildren().forEach((enemy) => {
-            enemy.update(delta);
+            enemy.update(gameSpeedDelta);
         });
 
         // Check for collisions between dino and enemies
@@ -948,29 +1044,21 @@ export class GameScene extends Phaser.Scene {
         // Only birds need speed updates since rocks use ground position
         this.#enemies.getChildren().forEach((enemy) => {
             if (enemy instanceof Bird && enemy.body) {
-                const baseSpeed = Phaser.Math.Between(Bird.SPEED_RANGE.min, Bird.SPEED_RANGE.max);
-                const speedMult = 1 + ((this.#difficultyManager.getCurrentLevel() - 1) * 0.05);
-                enemy.body.setVelocityX(baseSpeed * speedMult);
+                enemy.setSpeed(this.#difficultyManager.getCurrentSpeed());
             }
         });
 
         // Adjust spawn timers based on difficulty
         if (this.#spawnTimers.has('rock')) {
             const rockTimer = this.#spawnTimers.get('rock');
-            const newDelay = Phaser.Math.Between(
-                2000 / speedMultiplier,  // Faster minimum spawn rate
-                8000 / speedMultiplier,   // Faster maximum spawn rate
-            );
+            const newDelay = Phaser.Math.Between(2000, 4000) / speedMultiplier;
             rockTimer.delay = newDelay;
             rockTimer.reset({ delay: newDelay, callback: rockTimer.callback, callbackScope: this });
         }
 
         if (this.#spawnTimers.has('bird')) {
             const birdTimer = this.#spawnTimers.get('bird');
-            const newDelay = Phaser.Math.Between(
-                4000 / speedMultiplier,  // Faster minimum spawn rate
-                14000 / speedMultiplier,  // Faster maximum spawn rate
-            );
+            const newDelay = Phaser.Math.Between(1500, 10000) / speedMultiplier;
             birdTimer.delay = newDelay;
             birdTimer.reset({ delay: newDelay, callback: birdTimer.callback, callbackScope: this });
         }
@@ -995,6 +1083,14 @@ export class GameScene extends Phaser.Scene {
     }
 
     /**
+     * Gets the camera manager instance
+     * @returns {CameraManager} The camera manager
+     */
+    getCameraManager() {
+        return this.#cameraManager;
+    }
+
+    /**
      * Handles what happens when our dino bumps into any enemy
      * Game over! Time to try again!
      *
@@ -1007,6 +1103,8 @@ export class GameScene extends Phaser.Scene {
         }
 
         this.#isGameOver = true;
+        this.anims.globalTimeScale = 1;
+        this.physics.world.timeScale = 1;
 
         // Stop enemy movement based on physics body type
         if (enemy.body) {
@@ -1210,6 +1308,8 @@ export class GameScene extends Phaser.Scene {
         }
 
         // Reset game state
+        this.anims.globalTimeScale = 1;
+        this.physics.world.timeScale = 1;
         this.#isGameOver = false;
         this.#isPaused = false;
         this.physics.resume();
