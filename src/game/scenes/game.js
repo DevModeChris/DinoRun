@@ -1255,6 +1255,9 @@ export class Game extends Phaser.Scene {
                 rotate: { min: 0, max: 360 }, // Particles spin as they move
             });
 
+            // Register the emitter with the main camera
+            this.#cameraManager.registerUIElement(emitter);
+
             // Stop emitting after 10 seconds
             this.time.delayedCall(20000, () => {
                 emitter.stop();
