@@ -238,17 +238,27 @@ export class Dino extends Phaser.GameObjects.Sprite {
                 this.#justDoubleJumped = false;
             }
 
-            // Hold the peak frame once the jump-up animation completes
-            else if (this.anims.currentAnim?.key === 'dino-jump-up' && !this.anims.isPlaying) {
-                this.setFrame('jump-3');
-            }
-            this.#wasInAir = true;
-
-            // If ducking while jumping, pause the animation
-            if (this.#isDucking) {
+            // If ducking while jumping, pause the duck animation
+            else if (this.#isDucking) {
                 this.play('dino-duck', true);
                 this.anims.pause();
             }
+
+            // Hold the peak frame once the jump-up animation completes
+            else if (this.anims.currentAnim?.key === 'dino-jump-up' && !this.anims.isPlaying) {
+                // Check if we're falling (negative velocity means going up)
+                /** @type {Phaser.Physics.Arcade.Body} */
+                const body = this.body;
+                if (body.velocity.y > 0) {
+                    // Use frame 4 for falling
+                    this.setFrame('jump-4');
+                }
+                else {
+                    // Use frame 3 for peak/rising
+                    this.setFrame('jump-3');
+                }
+            }
+            this.#wasInAir = true;
         }
         else if (this.#wasInAir) {
             // Just landed
@@ -585,15 +595,33 @@ export class Dino extends Phaser.GameObjects.Sprite {
      * Enable slow motion
      */
     enableSlowMotion() {
-        this.#isSlowMotion = true;
-        this.anims.speed = 0.5;
+        if (!this.#isSlowMotion) {
+            this.#isSlowMotion = true;
+            this.scene.anims.globalTimeScale = 0.5;
+
+            // Scale physics timestep to match slowmo
+            this.scene.physics.world.timeScale = 2;
+
+            // Adjust gravity to compensate for time scaling
+            const body = this.body;
+            body.setGravityY(body.gravity.y * 2);
+        }
     }
 
     /**
      * Disable slow motion
      */
     disableSlowMotion() {
-        this.#isSlowMotion = false;
-        this.anims.speed = 1;
+        if (this.#isSlowMotion) {
+            this.#isSlowMotion = false;
+            this.scene.anims.globalTimeScale = 1;
+
+            // Reset physics timestep
+            this.scene.physics.world.timeScale = 1;
+
+            // Reset gravity
+            const body = this.body;
+            body.setGravityY(body.gravity.y / 2);
+        }
     }
 }
