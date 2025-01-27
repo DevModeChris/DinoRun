@@ -21,6 +21,7 @@ export class Bootloader extends Phaser.Scene {
 
     // Declare private methods in class scope
     #createLoadingUI;
+    #loadFonts;
     #loadSprites;
     #loadAudioFiles;
     #startSecondPhase;
@@ -94,7 +95,7 @@ export class Bootloader extends Phaser.Scene {
             // Loading Text - Now we can use our custom font
             const loadingText = this.add.text(baseX + 80, baseY - 50, 'Loading...', {
                 fontSize: '24px',
-                fontFamily: 'annie-use-your-telescope',
+                fontFamily: 'grandstander-bold',
                 fill: '#FFFFFF',
             });
             loadingText.setOrigin(0, 0.5);
@@ -177,6 +178,12 @@ export class Bootloader extends Phaser.Scene {
             this.load.audio('musicGame', 'src/assets/audio/music/game.ogg');
         };
 
+        this.#loadFonts = () => {
+            this.load.font('grandstander-thin', 'src/assets/fonts/Grandstander-Thin.ttf', 'truetype');
+            this.load.font('grandstander', 'src/assets/fonts/Grandstander-Regular.ttf', 'truetype');
+            this.load.font('grandstander-black', 'src/assets/fonts/Grandstander-Black.ttf', 'truetype');
+        };
+
         this.#startSecondPhase = () => {
             // Reset the loader
             this.load.reset();
@@ -189,6 +196,7 @@ export class Bootloader extends Phaser.Scene {
 
             // Load remaining assets
             this.#loadSprites();
+            this.#loadFonts();
             this.#loadAudioFiles();
 
             // Start loading and handle completion
@@ -215,8 +223,8 @@ export class Bootloader extends Phaser.Scene {
         );
 
         this.load.font(
-            'annie-use-your-telescope',
-            'src/assets/fonts/AnnieUseYourTelescope-Regular.ttf',
+            'grandstander-bold',
+            'src/assets/fonts/Grandstander-Bold.ttf',
             'truetype',
         );
 

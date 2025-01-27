@@ -22,10 +22,10 @@ export class Bird extends Phaser.GameObjects.Sprite {
     static SPAWN_HEIGHTS = [120, 130, 140, 150, 200, 220, 240, 250]; // Heights above ground level
 
     /** @type {number} */
-    #originalVelocityX;
+    #baseSpeed;
 
     /** @type {number} */
-    #baseSpeed;
+    #currentGameSpeed;
 
     /**
      * Creates a new bird enemy! 🦅
@@ -45,6 +45,9 @@ export class Bird extends Phaser.GameObjects.Sprite {
         scene.add.existing(this);
         scene.physics.add.existing(this);
 
+        // Store initial game speed
+        this.#currentGameSpeed = gameSpeed;
+
         // Calculate scaled speed range based on game speed
         const speedScale = gameSpeed / 280; // Normalise by base game speed
         const scaledMin = Bird.BASE_SPEED_RANGE.min * speedScale;
@@ -52,7 +55,6 @@ export class Bird extends Phaser.GameObjects.Sprite {
 
         // Set random speed within scaled range
         this.#baseSpeed = Phaser.Math.Between(scaledMin, scaledMax);
-        this.#originalVelocityX = this.#baseSpeed;
 
         // Set up physics body
         /** @type {Phaser.Physics.Arcade.Body} */
@@ -100,7 +102,6 @@ export class Bird extends Phaser.GameObjects.Sprite {
      */
     pause() {
         this.anims.pause();
-        this.#originalVelocityX = this.body.velocity.x;
         this.body.setVelocityX(0);
     }
 
@@ -109,7 +110,11 @@ export class Bird extends Phaser.GameObjects.Sprite {
      */
     resume() {
         this.anims.resume();
-        this.body.setVelocityX(this.#originalVelocityX);
+
+        // Calculate proper velocity based on current game speed
+        const speedScale = this.#currentGameSpeed / 280;
+        const scaledVelocity = this.#baseSpeed * speedScale;
+        this.body.setVelocityX(scaledVelocity);
     }
 
     /**
@@ -118,8 +123,11 @@ export class Bird extends Phaser.GameObjects.Sprite {
      * @param {number} gameSpeed - The current game speed
      */
     setSpeed(gameSpeed) {
-        const speedScale = gameSpeed / 280; // Normalize by base game speed
-        const newSpeed = this.#originalVelocityX * speedScale;
+        // Store current game speed for pause/resume
+        this.#currentGameSpeed = gameSpeed;
+
+        const speedScale = gameSpeed / 280; // Normalise by base game speed
+        const newSpeed = this.#baseSpeed * speedScale;
 
         /** @type {Phaser.Physics.Arcade.Body} */
         const body = this.body;

@@ -34,7 +34,7 @@ export class CameraManager {
     static EFFECT_SCALE = 1.15;
 
     /** @type {number} */
-    static SHAKE_INTENSITY = 0.003;
+    static SHAKE_INTENSITY = 0.002;
 
     /** @type {number} */
     static SLOWMO_SCALE = 0.5;

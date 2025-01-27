@@ -49,6 +49,9 @@ export class Dino extends Phaser.GameObjects.Sprite {
     /** @type {boolean} */
     #isSlowMotion = false;
 
+    /** @type {boolean} */
+    #controlsEnabled = true;
+
     /** @type {Object} */
     #keys;
 
@@ -157,6 +160,11 @@ export class Dino extends Phaser.GameObjects.Sprite {
             }
         }
 
+        // Don't process controls if disabled
+        if (!this.#controlsEnabled) {
+            return;
+        }
+
         // Update input states
         const jumpPressed = (this.#keys.UP.isDown || this.#keys.SPACE.isDown) // Keyboard
                           || this.#activeJumpPointers.size > 0; // Mobile
@@ -190,6 +198,15 @@ export class Dino extends Phaser.GameObjects.Sprite {
 
         // Update animations
         this.#updateAnimations(wasJumping);
+    }
+
+    /**
+     * Enables or disables dino controls
+     *
+     * @param {boolean} enabled - Whether controls should be enabled
+     */
+    setControlsEnabled(enabled) {
+        this.#controlsEnabled = enabled;
     }
 
     /**
@@ -525,9 +542,6 @@ export class Dino extends Phaser.GameObjects.Sprite {
      */
     resume() {
         this.anims.resume();
-
-        // Show mobile controls
-        this.toggleButtonVisibility();
     }
 
     /**

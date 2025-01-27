@@ -28,15 +28,15 @@ export class ScoreManager {
      * @param {Phaser.Scene} scene - The game scene where we'll show the score
      * @param {number} x - Where to put the score on the screen (left to right)
      * @param {number} y - Where to put the score on the screen (top to bottom)
-     * @param {number} [fontSize=28] - Size of the score text
+     * @param {number} [fontSize=24] - Size of the score text
      */
-    constructor(scene, x, y, fontSize = 28) {
+    constructor(scene, x, y, fontSize = 24) {
         this.#baseFontSize = fontSize;
         this.#loadHighScore();
 
         const textConfig = {
             fontSize: `${fontSize}px`,
-            fontFamily: 'annie-use-your-telescope',
+            fontFamily: 'grandstander-thin',
             fill: '#FFFFFF',
             align: 'right',
         };
@@ -161,7 +161,7 @@ export class ScoreManager {
     updateFontSize(size) {
         const textConfig = {
             fontSize: `${size}px`,
-            fontFamily: 'annie-use-your-telescope',
+            fontFamily: 'grandstander-thin',
             fill: '#FFFFFF',
             align: 'right',
         };

@@ -13,6 +13,7 @@ import { SkySystem } from '../systems/sky-system.js';
 import { ScoreManager } from '../systems/score-manager.js';
 import { DifficultyManager } from '../systems/difficulty-manager.js';
 import { CameraManager } from '../systems/camera-manager.js';
+import { CountdownSystem } from '../systems/countdown-system.js';
 import { checkIfMobile } from '../../utils/helpers.js';
 import {
     gameConfig,
@@ -44,6 +45,9 @@ export class Game extends Phaser.Scene {
 
     /** @type {CameraManager} */
     #cameraManager;
+
+    /** @type {CountdownSystem} */
+    #countdownSystem;
 
     /** @type {Phaser.GameObjects.Rectangle} */
     #platform;
@@ -105,6 +109,9 @@ export class Game extends Phaser.Scene {
     /** @type {boolean} */
     #isFullscreen = false;
 
+    /** @type {boolean} */
+    #isGameStarted = false;
+
     constructor() {
         super('Game');
     }
@@ -145,13 +152,34 @@ export class Game extends Phaser.Scene {
 
         // Create the visual scrolling ground
         this.#ground = new Ground(this, 0, 'ground-sprites', 'purpleGrass');
+        this.#ground.setScrollSpeed(0); // Start with ground not moving
 
         // Create the invisible platform for physics
         this.#platform = this.add.rectangle(0, 0, width, this.#groundCollisionHeight);
         this.physics.add.existing(this.#platform, true);
 
-        // Create dino at initial position
+        // Create dino at initial position and start with idle animation
         this.#dino = new Dino(this, 0, 0);
+        this.#dino.play('dino-idle'); // Ensure dino starts in idle animation
+
+        // Create countdown system
+        this.#countdownSystem = new CountdownSystem(this);
+
+        // Set up countdown event handlers
+        const countdownEvents = this.#countdownSystem.getEvents();
+        countdownEvents.on(CountdownSystem.EVENT_COUNTDOWN_START, () => {
+            // Disable controls and reset game state at start of countdown
+            this.#dino.setControlsEnabled(false);
+            this.#isGameStarted = false;
+        });
+
+        countdownEvents.on(CountdownSystem.EVENT_COUNTDOWN_COMPLETE, () => {
+            // Enable controls and start game when countdown completes
+            this.#isGameStarted = true;
+            this.#dino.setControlsEnabled(true);
+            this.#dino.play('dino-run');
+            this.#ground.setScrollSpeed(this.#difficultyManager.getCurrentSpeed());
+        });
 
         // Make the dino collide with the platform
         this.physics.add.collider(this.#dino, this.#platform);
@@ -163,33 +191,6 @@ export class Game extends Phaser.Scene {
         this.#enemies = this.add.group({
             classType: Phaser.GameObjects.Sprite,
             runChildUpdate: true,
-        });
-
-        // Start spawning enemies with randomised initial setup
-        this.time.delayedCall(2000, () => {
-            // Randomly choose which enemy type spawns first
-            const spawnFirst = Math.random() < 0.5 ? 'bird' : 'rock';
-
-            // Randomise initial delays (2-5 seconds for first enemy, 4-7 seconds for second)
-            const firstDelay = Phaser.Math.Between(0, 1000);
-            const secondDelay = Phaser.Math.Between(2000, 4000);
-
-            if (spawnFirst === 'bird') {
-                this.time.delayedCall(firstDelay, () => {
-                    this.#startSpawning('bird', () => this.#spawnBird(), 3000, 8000);
-                });
-                this.time.delayedCall(secondDelay, () => {
-                    this.#startSpawning('rock', () => this.#spawnRock(), 1500, 4000);
-                });
-            }
-            else {
-                this.time.delayedCall(firstDelay, () => {
-                    this.#startSpawning('rock', () => this.#spawnRock(), 1500, 4000);
-                });
-                this.time.delayedCall(secondDelay, () => {
-                    this.#startSpawning('bird', () => this.#spawnBird(), 3000, 8000);
-                });
-            }
         });
 
         // Initialise score display
@@ -230,13 +231,10 @@ export class Game extends Phaser.Scene {
         // Calculate initial positions with proper scale
         const isPortrait = height > width;
         const scale = isPortrait
-            ? Math.max(width / BASE_WIDTH, 0.85) // Increased minimum scale for portrait
+            ? Math.max(width / BASE_WIDTH, 0.85)
             : this.#isMobile
                 ? Math.max(height / (BASE_HEIGHT / 2), 0.85)
-                : Math.min(
-                    width / BASE_WIDTH,
-                    height / BASE_HEIGHT,
-                );
+                : Math.min(width / BASE_WIDTH, height / BASE_HEIGHT);
 
         // Add all UI elements to the UI camera
         this.#addUIElementsToCamera();
@@ -266,6 +264,9 @@ export class Game extends Phaser.Scene {
         if (debugGraphic) {
             this.#cameraManager.registerGameElement(debugGraphic);
         }
+
+        // Start the game with countdown
+        this.#startGameWithCountdown();
     }
 
     /**
@@ -281,8 +282,8 @@ export class Game extends Phaser.Scene {
             0,
             text,
             {
-                fontFamily: 'annie-use-your-telescope',
-                fontSize: '32px',
+                fontFamily: 'grandstander',
+                fontSize: '26px',
                 color: '#ffffff',
                 align: 'center',
                 backgroundColor: '#222222',
@@ -326,8 +327,8 @@ export class Game extends Phaser.Scene {
             0,
             'PAUSED',
             {
-                fontFamily: 'annie-use-your-telescope',
-                fontSize: '52px',
+                fontFamily: 'grandstander-bold',
+                fontSize: '46px',
                 color: '#ffffff',
                 align: 'center',
             },
@@ -340,8 +341,8 @@ export class Game extends Phaser.Scene {
             0,
             'Continue',
             {
-                fontFamily: 'annie-use-your-telescope',
-                fontSize: '32px',
+                fontFamily: 'grandstander',
+                fontSize: '26px',
                 padding: { x: 20, y: 10 },
             },
         );
@@ -351,8 +352,8 @@ export class Game extends Phaser.Scene {
             0,
             'Restart',
             {
-                fontFamily: 'annie-use-your-telescope',
-                fontSize: '32px',
+                fontFamily: 'grandstander',
+                fontSize: '26px',
                 padding: { x: 20, y: 10 },
             },
         );
@@ -381,8 +382,8 @@ export class Game extends Phaser.Scene {
             0,
             `Version: ${gameConfig.version}`,
             {
-                fontFamily: 'annie-use-your-telescope',
-                fontSize: '24px',
+                fontFamily: 'grandstander-thin',
+                fontSize: '20px',
                 color: '#ffffff',
             },
         ).setOrigin(0.5);
@@ -589,6 +590,7 @@ export class Game extends Phaser.Scene {
             this.#pauseHeader,
             this.#pauseButton,
             this.#fullscreenButton,
+            this.#countdownSystem.getCountdownContainer(),
         ].filter(Boolean); // Remove any null/undefined elements
 
         // Add each UI element to the UI camera if it exists
@@ -729,10 +731,13 @@ export class Game extends Phaser.Scene {
 
         this.#isPaused = !this.#isPaused;
 
-        // Show/hide pause overlay
-        this.#pauseOverlay.visible = this.#isPaused;
-
         if (this.#isPaused) {
+            // Stop any active countdown first
+            this.#countdownSystem.stopCountdown();
+
+            // Show pause overlay
+            this.#pauseOverlay.visible = true;
+
             this.physics.pause();
 
             // Pause dino
@@ -761,35 +766,8 @@ export class Game extends Phaser.Scene {
             }
         }
         else {
-            this.physics.resume();
+            // Hide pause overlay immediately
             this.#pauseOverlay.setVisible(false);
-
-            // Resume dino
-            this.#dino.resume();
-
-            // Resume ground scrolling with current difficulty speed
-            this.#ground.setScrollSpeed(this.#difficultyManager.getCurrentSpeed());
-
-            // Resume all enemies
-            this.#enemies.getChildren().forEach((enemy) => {
-                enemy.resume();
-            });
-
-            // Only restart spawning if we don't have any active spawn timers
-            if (this.#spawnTimers.size === 0) {
-                // Use the last spawn times to maintain proper spacing
-                const currentTime = this.time.now;
-                const birdDelay = Math.max(0, 3000 - (currentTime - (this.#lastSpawnTimes['bird'] || 0)));
-                const rockDelay = Math.max(0, 1500 - (currentTime - (this.#lastSpawnTimes['rock'] || 0)));
-
-                this.time.delayedCall(birdDelay, () => {
-                    this.#startSpawning('bird', () => this.#spawnBird(), 3000, 8000);
-                });
-
-                this.time.delayedCall(rockDelay, () => {
-                    this.#startSpawning('rock', () => this.#spawnRock(), 1500, 4000);
-                });
-            }
 
             // Show in-game UI elements
             if (this.#pauseButton) {
@@ -798,6 +776,41 @@ export class Game extends Phaser.Scene {
             if (this.#fullscreenButton) {
                 this.#fullscreenButton.setVisible(true);
             }
+
+            // Show mobile controls
+            this.#dino.toggleButtonVisibility();
+
+            // Start countdown before resuming
+            this.#countdownSystem.startCountdown(0, 0, () => {
+                this.physics.resume();
+
+                // Resume dino
+                this.#dino.resume();
+
+                // Resume ground scrolling with current difficulty speed
+                this.#ground.setScrollSpeed(this.#difficultyManager.getCurrentSpeed());
+
+                // Resume all enemies
+                this.#enemies.getChildren().forEach((enemy) => {
+                    enemy.resume();
+                });
+
+                // Only restart spawning if we don't have any active spawn timers
+                if (this.#spawnTimers.size === 0) {
+                    // Use the last spawn times to maintain proper spacing
+                    const currentTime = this.time.now;
+                    const birdDelay = Math.max(0, 3000 - (currentTime - (this.#lastSpawnTimes['bird'] || 0)));
+                    const rockDelay = Math.max(0, 1500 - (currentTime - (this.#lastSpawnTimes['rock'] || 0)));
+
+                    this.time.delayedCall(birdDelay, () => {
+                        this.#startSpawning('bird', () => this.#spawnBird(), 3000, 8000);
+                    });
+
+                    this.time.delayedCall(rockDelay, () => {
+                        this.#startSpawning('rock', () => this.#spawnRock(), 1500, 4000);
+                    });
+                }
+            });
         }
     }
 
@@ -987,7 +1000,7 @@ export class Game extends Phaser.Scene {
 
         // Get time scales
         const slowMotionScale = this.anims.globalTimeScale;
-        const gameSpeed = this.#difficultyManager.getCurrentSpeed() / 280; // Normalize by base speed
+        const gameSpeed = this.#difficultyManager.getCurrentSpeed() / 280; // Normalise by base speed
         const slowMotionDelta = delta * slowMotionScale;
         const gameSpeedDelta = slowMotionDelta * gameSpeed;
 
@@ -997,12 +1010,19 @@ export class Game extends Phaser.Scene {
         // Update our magical sky ✨ (affected by slow motion but not game speed)
         this.#skySystem.update(time, slowMotionDelta);
 
-        // Update score and difficulty (affected by both slow motion and game speed)
-        this.#scoreManager.update(time, gameSpeedDelta);
-        const score = this.#scoreManager.getCurrentScore();
-        if (this.#difficultyManager.update(score)) {
-            // Adjust spawn rates
-            this.#updateSpawnRates();
+        // Only update score and difficulty if game has started (countdown finished)
+        if (this.#isGameStarted) {
+            // Update score and difficulty (affected by both slow motion and game speed)
+            this.#scoreManager.update(time, gameSpeedDelta);
+            const score = this.#scoreManager.getCurrentScore();
+            if (this.#difficultyManager.update(score)) {
+                // Adjust spawn rates
+                // TODO: Fix this spawning enemies immediately after pause
+                this.#updateSpawnRates();
+
+                // Speed changed, update ground scroll speed
+                this.#ground.setScrollSpeed(this.#difficultyManager.getCurrentSpeed());
+            }
         }
 
         // Update debug text if enabled
@@ -1150,7 +1170,7 @@ export class Game extends Phaser.Scene {
 
         // Set different font sizes for each line
         const textConfig = {
-            fontFamily: 'annie-use-your-telescope',
+            fontFamily: 'grandstander',
             fill: '#ffffff',
             align: 'center',
             lineSpacing: 20,
@@ -1172,6 +1192,7 @@ export class Game extends Phaser.Scene {
 
             if (index === 0) {
                 fontSize = 52; // "GAME OVER"
+                textStyle.fontFamily = 'grandstander-bold';
                 textStyle.fontSize = `${fontSize}px`;
                 textStyle.strokeThickness = 5;
             }
@@ -1187,7 +1208,7 @@ export class Game extends Phaser.Scene {
                         offsetX: 0,
                         offsetY: 0,
                         color: '#FFD700',
-                        blur: 10,
+                        blur: 6,
                         stroke: true,
                         fill: true,
                     },
@@ -1319,5 +1340,43 @@ export class Game extends Phaser.Scene {
 
         // Restart the scene
         this.scene.restart();
+    }
+
+    /**
+     * Starts the game with countdown
+     */
+    #startGameWithCountdown() {
+        // Ensure dino is in idle animation
+        this.#dino.play('dino-idle');
+
+        // Start countdown at dino's position
+        this.#countdownSystem.startCountdown(0, 0, () => {
+            // Start spawning enemies after a short delay
+            this.time.delayedCall(2000, () => {
+                // Randomly choose which enemy type spawns first
+                const spawnFirst = Math.random() < 0.5 ? 'bird' : 'rock';
+
+                // Randomise initial delays (2-5 seconds for first enemy, 4-7 seconds for second)
+                const firstDelay = Phaser.Math.Between(0, 1000);
+                const secondDelay = Phaser.Math.Between(2000, 4000);
+
+                if (spawnFirst === 'bird') {
+                    this.time.delayedCall(firstDelay, () => {
+                        this.#startSpawning('bird', () => this.#spawnBird(), 3000, 8000);
+                    });
+                    this.time.delayedCall(secondDelay, () => {
+                        this.#startSpawning('rock', () => this.#spawnRock(), 1500, 4000);
+                    });
+                }
+                else {
+                    this.time.delayedCall(firstDelay, () => {
+                        this.#startSpawning('rock', () => this.#spawnRock(), 1500, 4000);
+                    });
+                    this.time.delayedCall(secondDelay, () => {
+                        this.#startSpawning('bird', () => this.#spawnBird(), 3000, 8000);
+                    });
+                }
+            });
+        });
     }
 }
