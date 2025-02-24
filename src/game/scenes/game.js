@@ -1089,7 +1089,7 @@ export class Game extends BaseScene {
         // Only birds need speed updates since rocks use ground position
         this.#enemies.getChildren().forEach((enemy) => {
             if (enemy instanceof Bird && enemy.body) {
-                enemy.setSpeed(this.#difficultyManager.getCurrentSpeed());
+                enemy.setGameSpeed(this.#difficultyManager.getCurrentSpeed());
             }
         });
 

@@ -14,15 +14,15 @@ export class Bird extends Phaser.GameObjects.Sprite {
 
     /** @type {{min: number, max: number}} */
     static BASE_SPEED_RANGE = {
-        min: -450,  // Faster birds
-        max: -350,  // Slower birds
+        min: 1.6,  // Faster birds (multiplier relative to ground speed)
+        max: 1.8,  // Slower birds (multiplier relative to ground speed)
     };
 
     /** @type {number[]} */
     static SPAWN_HEIGHTS = [120, 130, 140, 150, 200, 220, 240, 250]; // Heights above ground level
 
     /** @type {number} */
-    #baseSpeed;
+    #speedMultiplier;
 
     /** @type {number} */
     #currentGameSpeed;
@@ -48,19 +48,17 @@ export class Bird extends Phaser.GameObjects.Sprite {
         // Store initial game speed
         this.#currentGameSpeed = gameSpeed;
 
-        // Calculate scaled speed range based on game speed
-        const speedScale = gameSpeed / 280; // Normalise by base game speed
-        const scaledMin = Bird.BASE_SPEED_RANGE.min * speedScale;
-        const scaledMax = Bird.BASE_SPEED_RANGE.max * speedScale;
-
-        // Set random speed within scaled range
-        this.#baseSpeed = Phaser.Math.Between(scaledMin, scaledMax);
+        // Calculate speed multiplier based on gameSpeed
+        // Base multiplier range for gameSpeed 280 is 1.6 - 1.8
+        // Add an extra boost proportional to how much gameSpeed exceeds 280
+        const baseMultiplier = Phaser.Math.FloatBetween(Bird.BASE_SPEED_RANGE.min, Bird.BASE_SPEED_RANGE.max);
+        const extraBoost = (gameSpeed - 280) / 500;
+        this.#speedMultiplier = baseMultiplier + extraBoost;
 
         // Set up physics body
         /** @type {Phaser.Physics.Arcade.Body} */
         const body = this.body;
         body.setSize(Bird.WIDTH, Bird.HEIGHT);
-        body.setVelocityX(this.#baseSpeed);
         body.setAllowGravity(false);
 
         // Create flying animation if it doesn't exist
@@ -79,6 +77,9 @@ export class Bird extends Phaser.GameObjects.Sprite {
         // Start flying!
         this.play('bird-fly');
 
+        // Register update handler so that the bird moves each frame using delta time
+        this.scene.events.on('update', this.update, this);
+
         // Auto-destroy when off screen
         this.checkDestroy = this.scene.time.addEvent({
             delay: 100,
@@ -86,6 +87,33 @@ export class Bird extends Phaser.GameObjects.Sprite {
             callbackScope: this,
             loop: true,
         });
+    }
+
+    /**
+     * Updates the bird's position based on game speed and delta time
+     *
+     * @param {number} time - Time since last update in milliseconds
+     * @param {number} delta - Time since last update in milliseconds
+     */
+    update(time, delta) {
+        // If the bird is not active, skip update
+        if (!this.active) {
+            return;
+        }
+
+        // Update the physics body's horizontal velocity based on the current game speed and multiplier
+        if (this.body && this.body.enable) {
+            this.body.setVelocityX(-this.#currentGameSpeed * this.#speedMultiplier);
+        }
+    }
+
+    /**
+     * Updates the current game speed
+     *
+     * @param {number} newSpeed - The new game speed
+     */
+    setGameSpeed(newSpeed) {
+        this.#currentGameSpeed = newSpeed;
     }
 
     /**
@@ -110,28 +138,7 @@ export class Bird extends Phaser.GameObjects.Sprite {
      */
     resume() {
         this.anims.resume();
-
-        // Calculate proper velocity based on current game speed
-        const speedScale = this.#currentGameSpeed / 280;
-        const scaledVelocity = this.#baseSpeed * speedScale;
-        this.body.setVelocityX(scaledVelocity);
-    }
-
-    /**
-     * Updates the bird's speed! 🏃‍♂️
-     *
-     * @param {number} gameSpeed - The current game speed
-     */
-    setSpeed(gameSpeed) {
-        // Store current game speed for pause/resume
-        this.#currentGameSpeed = gameSpeed;
-
-        const speedScale = gameSpeed / 280; // Normalise by base game speed
-        const newSpeed = this.#baseSpeed * speedScale;
-
-        /** @type {Phaser.Physics.Arcade.Body} */
-        const body = this.body;
-        body.setVelocityX(newSpeed);
+        this.body.setVelocityX(-this.#currentGameSpeed * this.#speedMultiplier);
     }
 
     /**
@@ -148,5 +155,16 @@ export class Bird extends Phaser.GameObjects.Sprite {
         const spawnY = groundY - heightAboveGround;
 
         return new Bird(scene, gameWidth + Bird.WIDTH, spawnY, gameSpeed);
+    }
+
+    /**
+     * Overrides the default destroy method to also remove the update event listener
+     */
+    destroy(...args) {
+        // Remove the update event listener if scene exists, to avoid memory leaks
+        if (this.scene && this.scene.events) {
+            this.scene.events.off('update', this.update, this);
+        }
+        super.destroy(...args);
     }
 }
