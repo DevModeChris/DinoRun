@@ -4,9 +4,9 @@
  * Think of it like packing your backpack before a big adventure -
  * we need to make sure we have everything ready before we start playing!
  */
-import Phaser from 'phaser';
+import { BaseScene } from './base-scene.js';
 
-export class Bootloader extends Phaser.Scene {
+export class Bootloader extends BaseScene {
     /** @type {Phaser.GameObjects.Rectangle} */
     #progressBarBg;
 
@@ -27,7 +27,7 @@ export class Bootloader extends Phaser.Scene {
     #startSecondPhase;
 
     constructor() {
-        super('Bootloader');
+        super({ key: 'Bootloader' });
 
         // Define private methods in constructor
         this.#createLoadingUI = () => {
@@ -174,8 +174,14 @@ export class Bootloader extends Phaser.Scene {
 
         this.#loadAudioFiles = () => {
             // Load music files
-            this.load.audio('musicMenu', 'src/assets/audio/music/menu.ogg');
-            this.load.audio('musicGame', 'src/assets/audio/music/game.ogg');
+            this.load.audio('music_menu', 'src/assets/audio/music/menu.ogg');
+            this.load.audio('music_game', 'src/assets/audio/music/OFDN_Victory_Party.ogg');
+
+            // Load sfx files
+            this.load.audio('sfx_countdown', 'src/assets/audio/countdown.ogg');
+            this.load.audio('sfx_player_jump', 'src/assets/audio/player/jump.ogg');
+            this.load.audio('sfx_player_land', 'src/assets/audio/player/land.ogg');
+            this.load.audio('sfx_player_death', 'src/assets/audio/player/death.ogg');
         };
 
         this.#loadFonts = () => {
@@ -215,6 +221,9 @@ export class Bootloader extends Phaser.Scene {
      * First phase: Load essential UI assets and gradient shader
      */
     preload() {
+        // Call base preload method first
+        super.preload();
+
         // Then load essential UI assets
         this.load.atlas(
             'dino-sprites',

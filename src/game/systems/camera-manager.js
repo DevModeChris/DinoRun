@@ -1,8 +1,31 @@
 /**
  * 📸 The CameraManager handles all our camera effects!
+ *
  * It makes the game feel more alive with shakes, zooms, and bounces.
  */
+import { logger } from '../../utils/logger.js';
+import { GameEvents } from '../constants/game-events.js';
+
+/**
+ * @typedef {import('./event-manager.js').IEventEmitter} IEventEmitter
+ */
+
 export class CameraManager {
+    /** @type {number} */
+    static LAND_SHAKE_DURATION = 200;
+
+    /** @type {number} */
+    static SHAKE_INTENSITY = 0.004;
+
+    /** @type {number} */
+    static DUCK_ZOOM_DURATION = 200;
+
+    /** @type {number} */
+    static EFFECT_SCALE = 1.15;
+
+    /** @type {number} */
+    static SLOW_MOTION_SCALE = 0.5;
+
     /** @type {Phaser.Scene} */
     #scene;
 
@@ -24,34 +47,21 @@ export class CameraManager {
     /** @type {Set<Phaser.GameObjects.GameObject>} */
     #gameElements = new Set();
 
-    /** @type {number} */
-    static DUCK_ZOOM_DURATION = 200;
-
-    /** @type {number} */
-    static LAND_SHAKE_DURATION = 200;
-
-    /** @type {number} */
-    static EFFECT_SCALE = 1.15;
-
-    /** @type {number} */
-    static SHAKE_INTENSITY = 0.002;
-
-    /** @type {number} */
-    static SLOWMO_SCALE = 0.5;
-
-    /** @type {number} */
-    static SLOWMO_DURATION = 200;
-
     /** @type {boolean} */
     #isSlowMotionActive = false;
+
+    /** @type {IEventEmitter} */
+    #events;
 
     /**
      * Creates our camera effects system! 🎥
      *
      * @param {Phaser.Scene} scene - The scene that owns this camera system
+     * @param {IEventEmitter} events - The event emitter to use
      */
-    constructor(scene) {
+    constructor(scene, events) {
         this.#scene = scene;
+        this.#events = events;
         this.#setupCameras(); // Set up both main and UI cameras
     }
 
@@ -81,12 +91,12 @@ export class CameraManager {
             width + (CAMERA_PADDING.x * 2),
             height + (CAMERA_PADDING.y * 2),
         );
-        this.#mainCamera.setRoundPixels(true);
+        this.#mainCamera.setRoundPixels(false);
 
         // Create a separate camera for UI elements that stays fixed
         this.#uiCamera = this.#scene.cameras.add(0, 0, width, height, false, 'uiCamera');
         this.#uiCamera.setScroll(0, 0);
-        this.#uiCamera.setRoundPixels(true);
+        this.#uiCamera.setRoundPixels(false);
 
         // Store padding for other systems to use
         this.cameraPadding = CAMERA_PADDING;
@@ -219,26 +229,46 @@ export class CameraManager {
     }
 
     /**
-     * Makes everything go slow motion! 🐌
-     * Like we're in an action movie!
+     * @private
+     * Sets the slow motion state for the game
      *
-     * @param {boolean} active - Whether to activate or deactivate slow motion
+     * @param {boolean} active - Whether to enable slow motion
      * @param {boolean} inMidair - Whether the dino is in midair
      */
     #setSlowMotion(active, inMidair) {
         // Always allow deactivation, but only activate if in midair
         if (active && (!inMidair || this.#isSlowMotionActive)) {
+            logger.debug('Skipping slow motion activation', {
+                reason: !inMidair ? 'not in midair' : 'already active',
+                active,
+                inMidair,
+                currentState: this.#isSlowMotionActive,
+            });
+
             return;
         }
 
+        // Only log state changes
+        if (this.#isSlowMotionActive !== active) {
+            logger.debug('Slow motion state changed', {
+                from: this.#isSlowMotionActive,
+                to: active,
+                inMidair,
+                timeScale: active ? CameraManager.SLOW_MOTION_SCALE : 1,
+            });
+        }
+
         this.#isSlowMotionActive = active;
-        const targetTimeScale = active ? CameraManager.SLOWMO_SCALE : 1;
+        const targetTimeScale = active ? CameraManager.SLOW_MOTION_SCALE : 1;
 
         // Slow down physics
         this.#scene.physics.world.timeScale = 1 / targetTimeScale;
 
         // Slow down animations globally
         this.#scene.anims.globalTimeScale = targetTimeScale;
+
+        // Trigger slow motion event
+        this.#events.emit(GameEvents.SLOW_MOTION_ACTIVE, active);
     }
 
     /**

@@ -5,6 +5,12 @@
  */
 import Phaser from 'phaser';
 import { checkIfMobile } from '../../utils/helpers.js';
+import { logger } from '../../utils/logger.js';
+import { InputLogger } from '../../utils/input-logger.js';
+
+/**
+ * @typedef {import('../systems/event-manager.js').IEventEmitter} IEventEmitter
+ */
 
 export class Dino extends Phaser.GameObjects.Sprite {
     /** @type {number} */
@@ -47,9 +53,6 @@ export class Dino extends Phaser.GameObjects.Sprite {
     #wasInAir = false;
 
     /** @type {boolean} */
-    #isSlowMotion = false;
-
-    /** @type {boolean} */
     #controlsEnabled = true;
 
     /** @type {Object} */
@@ -82,18 +85,34 @@ export class Dino extends Phaser.GameObjects.Sprite {
     /** @type {CameraManager} */
     #cameraManager;
 
+    /** @type {InputLogger} */
+    #inputLogger;
+
+    /** @type {IEventEmitter} */
+    #events;
+
+    /** @type {SoundManager} */
+    #soundManager;
+
     /**
      * Creates our lovable dino character! 🦖
      *
      * @param {Phaser.Scene} scene - The scene that owns this dino
      * @param {number} x - The dino's starting x position
      * @param {number} y - The dino's starting y position
+     * @param {IEventEmitter} events - The event emitter to use
      */
-    constructor(scene, x, y) {
+    constructor(scene, x, y, events) {
         super(scene, x, y, 'dino-sprites', 'idle-1');
+
+        // Store event emitter
+        this.#events = events;
 
         // Get camera manager reference
         this.#cameraManager = scene.getCameraManager();
+
+        // Get sound manager reference
+        this.#soundManager = scene.getSoundManager();
 
         // Set up the dino's size and origin
         this.setOrigin(0.5, 1);
@@ -114,16 +133,8 @@ export class Dino extends Phaser.GameObjects.Sprite {
         // Create the animations
         this.#createAnimations();
 
-        // Set up keyboard controls
-        this.#keys = scene.input.keyboard.addKeys('UP, DOWN, SPACE, CTRL');
-
-        // Check if we're on mobile and set up mobile controls if needed
-        this.#isMobile = checkIfMobile();
-        if (this.#isMobile) {
-            // Enable multi-touch
-            scene.input.addPointer(2);
-            this.#setupMobileControls();
-        }
+        // Set up controls
+        this.#setupControls();
 
         // Start idle animation
         this.play('dino-idle');
@@ -189,7 +200,6 @@ export class Dino extends Phaser.GameObjects.Sprite {
         if (duckPressed) {
             if (!this.#isDucking) {
                 this.duck();
-                this.#cameraManager.playDuckEffect(this.#isJumping);
             }
         }
         else if (this.#isDucking) {
@@ -216,6 +226,7 @@ export class Dino extends Phaser.GameObjects.Sprite {
         if (this.#wasInAir) {
             this.#wasInAir = false;
             this.#cameraManager.playLandEffect();
+            this.#soundManager.playPlayerLandSound();
 
             // Reset slow motion if we were ducking when we landed
             if (this.#isDucking) {
@@ -457,6 +468,7 @@ export class Dino extends Phaser.GameObjects.Sprite {
         if (this.#remainingJumps > 0) {
             body.setVelocityY(-this.#jumpForce);
             this.#isJumping = true;
+            this.#soundManager.playPlayerJumpSound();
 
             // Flag if this is a double jump (not the first jump)
             if (this.#remainingJumps < Dino.MAX_JUMPS) {
@@ -592,36 +604,165 @@ export class Dino extends Phaser.GameObjects.Sprite {
     }
 
     /**
-     * Enable slow motion
+     * 🎮 Sets up all the dino's controls and input logging
      */
-    enableSlowMotion() {
-        if (!this.#isSlowMotion) {
-            this.#isSlowMotion = true;
-            this.scene.anims.globalTimeScale = 0.5;
+    #setupControls() {
+        // Create an input logger for the dino
+        this.#inputLogger = new InputLogger(this.scene, 'Dino');
 
-            // Scale physics timestep to match slowmo
-            this.scene.physics.world.timeScale = 2;
+        // Set up keyboard controls
+        this.#keys = this.scene.input.keyboard.addKeys('UP,DOWN,SPACE,CTRL');
 
-            // Adjust gravity to compensate for time scaling
-            const body = this.body;
-            body.setGravityY(body.gravity.y * 2);
+        // Check if we're on mobile and set up mobile controls if needed
+        this.#isMobile = checkIfMobile();
+        if (this.#isMobile) {
+            // Enable multi-touch
+            this.scene.input.addPointer(2);
+            this.#setupMobileControls();
+        }
+
+        // Add input logging
+        this.#setupInputLogging();
+    }
+
+    /**
+     * 📝 Sets up input logging for all controls
+     *
+     * @private
+     */
+    #setupInputLogging() {
+        try {
+            // Only set up logging if we have a logger
+            if (!this.#inputLogger) {
+                return;
+            }
+
+            // Log keyboard events if keys are available
+            if (this.#keys) {
+                const keyMap = {
+                    UP: { key: this.#keys.UP, description: '⬆️ Jump', keyCode: Phaser.Input.Keyboard.KeyCodes.UP },
+                    SPACE: { key: this.#keys.SPACE, description: '⬆️ Jump', keyCode: Phaser.Input.Keyboard.KeyCodes.SPACE },
+                    DOWN: { key: this.#keys.DOWN, description: '⬇️ Duck', keyCode: Phaser.Input.Keyboard.KeyCodes.DOWN },
+                    CTRL: { key: this.#keys.CTRL, description: '⬇️ Duck', keyCode: Phaser.Input.Keyboard.KeyCodes.CTRL },
+                };
+
+                // Add listeners to each key
+                Object.entries(keyMap).forEach(([keyName, { key, description, keyCode }]) => {
+                    if (key?.on) {
+                        key.on('down', () => {
+                            this.#inputLogger.logKeyboard({
+                                key: keyName,
+                                keyCode,
+                                repeat: key.isDown && key.isDown,
+                                action: description,
+                                type: 'keydown',
+                            });
+                        });
+                        key.on('up', () => {
+                            this.#inputLogger.logKeyboard({
+                                key: keyName,
+                                keyCode,
+                                repeat: false,
+                                action: description,
+                                type: 'keyup',
+                            });
+                        });
+                    }
+                });
+            }
+
+            // Log pointer events for mobile
+            if (this.#isMobile && this.scene?.input?.on) {
+                // Track pointer down events
+                this.scene.input.on('pointerdown', (pointer) => {
+                    const isBelowCentre = pointer.y > this.scene.cameras.main.centerY;
+                    this.#inputLogger.logPointer({
+                        x: pointer.x,
+                        y: pointer.y,
+                        id: pointer.id,
+                        isDown: true,
+                        button: pointer.button,
+                        action: isBelowCentre ? '⬇️ Duck' : '⬆️ Jump',
+                    });
+                });
+
+                // Track pointer up events
+                this.scene.input.on('pointerup', (pointer) => {
+                    this.#inputLogger.logPointer({
+                        x: pointer.x,
+                        y: pointer.y,
+                        id: pointer.id,
+                        isDown: false,
+                        button: pointer.button,
+                        action: this.#isDucking ? '⬆️ Stand' : '🔄 Release',
+                    });
+                });
+            }
+
+            // Log gamepad events if available
+            const gamepad = this.scene?.input?.gamepad;
+            if (gamepad?.on) {
+                gamepad.on('down', (pad, button) => {
+                    this.#inputLogger.logGamepad({
+                        pad: {
+                            index: pad.index,
+                            id: pad.id,
+                        },
+                        button: {
+                            index: button.index,
+                            value: button.value,
+                            action: button.index === 0 ? '⬆️ Jump' : '⬇️ Duck',
+                        },
+                    });
+                });
+
+                gamepad.on('up', (pad, button) => {
+                    this.#inputLogger.logGamepad({
+                        pad: {
+                            index: pad.index,
+                            id: pad.id,
+                        },
+                        button: {
+                            index: button.index,
+                            value: button.value,
+                            action: button.index === 1 && this.#isDucking ? '⬆️ Stand' : '🔄 Release',
+                        },
+                    });
+                });
+            }
+        }
+        catch (error) {
+            // If logging setup fails, log the error but don't break the game
+            logger.error('Failed to set up input logging', error);
         }
     }
 
     /**
-     * Disable slow motion
+     * Called when the dino dies! 💀
+     * Time to play a sad tune...
      */
-    disableSlowMotion() {
-        if (this.#isSlowMotion) {
-            this.#isSlowMotion = false;
-            this.scene.anims.globalTimeScale = 1;
+    die() {
+        // Play death animation and sound
+        this.play('dino-dead');
+        this.#soundManager.playPlayerDeathSound();
 
-            // Reset physics timestep
-            this.scene.physics.world.timeScale = 1;
+        // Disable controls
+        this.setControlsEnabled(false);
 
-            // Reset gravity
-            const body = this.body;
-            body.setGravityY(body.gravity.y / 2);
+        // Stop any current movement
+        /** @type {Phaser.Physics.Arcade.Body} */
+        const body = this.body;
+        body.setVelocity(0);
+        body.setAcceleration(0);
+    }
+
+    /**
+     * 🧹 Clean up when the dino is destroyed
+     */
+    destroy() {
+        if (this.#inputLogger) {
+            this.#inputLogger.destroy();
         }
+        super.destroy();
     }
 }

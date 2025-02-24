@@ -5,6 +5,7 @@
  * everything you see and do in the main game.
  */
 import Phaser from 'phaser';
+import { BaseScene } from './base-scene.js';
 import { Ground } from '../objects/ground.js';
 import { Dino } from '../objects/dino.js';
 import { Bird } from '../objects/bird.js';
@@ -14,14 +15,18 @@ import { ScoreManager } from '../systems/score-manager.js';
 import { DifficultyManager } from '../systems/difficulty-manager.js';
 import { CameraManager } from '../systems/camera-manager.js';
 import { CountdownSystem } from '../systems/countdown-system.js';
+import { SoundManager } from '../systems/sound-manager.js';
 import { checkIfMobile } from '../../utils/helpers.js';
+import { logger } from '../../utils/logger.js';
+import { createEventEmitter } from '../systems/event-manager.js';
+import { GameEvents } from '../constants/game-events.js';
 import {
     gameConfig,
     BASE_WIDTH,
     BASE_HEIGHT,
 } from '../config.js';
 
-export class Game extends Phaser.Scene {
+export class Game extends BaseScene {
     /** @type {boolean} */
     #isGameOver = false;
 
@@ -48,6 +53,9 @@ export class Game extends Phaser.Scene {
 
     /** @type {CountdownSystem} */
     #countdownSystem;
+
+    /** @type {SoundManager} */
+    #soundManager;
 
     /** @type {Phaser.GameObjects.Rectangle} */
     #platform;
@@ -112,8 +120,11 @@ export class Game extends Phaser.Scene {
     /** @type {boolean} */
     #isGameStarted = false;
 
+    /**
+     * Creates our main game scene! 🎮
+     */
     constructor() {
-        super('Game');
+        super({ key: 'Game' });
     }
 
     /**
@@ -139,10 +150,14 @@ export class Game extends Phaser.Scene {
      * Creates all the game objects and sets up the game
      */
     create() {
+        // Call base class method first
+        super.create();
+
         const { width, height } = this.scale;
+        const events = createEventEmitter();
 
         // Create camera manager before other game objects
-        this.#cameraManager = new CameraManager(this);
+        this.#cameraManager = new CameraManager(this, events);
 
         // Check if we're on mobile
         this.#isMobile = checkIfMobile();
@@ -158,34 +173,36 @@ export class Game extends Phaser.Scene {
         this.#platform = this.add.rectangle(0, 0, width, this.#groundCollisionHeight);
         this.physics.add.existing(this.#platform, true);
 
+        // Initialize managers before creating game objects
+        this.#soundManager = new SoundManager(this, events);
+        this.#countdownSystem = new CountdownSystem(this, events);
+
         // Create dino at initial position and start with idle animation
-        this.#dino = new Dino(this, 0, 0);
-        this.#dino.play('dino-idle'); // Ensure dino starts in idle animation
+        this.#dino = new Dino(this, 0, 0, events);
 
-        // Create countdown system
-        this.#countdownSystem = new CountdownSystem(this);
-
-        // Set up countdown event handlers
-        const countdownEvents = this.#countdownSystem.getEvents();
-        countdownEvents.on(CountdownSystem.EVENT_COUNTDOWN_START, () => {
+        // Set up countdown event handlers using shared event emitter
+        events.on(GameEvents.COUNTDOWN_START, () => {
             // Disable controls and reset game state at start of countdown
             this.#dino.setControlsEnabled(false);
             this.#isGameStarted = false;
+            this.#soundManager.pauseGameMusic();
+            this.#soundManager.playCountdownSound();
         });
 
-        countdownEvents.on(CountdownSystem.EVENT_COUNTDOWN_COMPLETE, () => {
+        events.on(GameEvents.COUNTDOWN_COMPLETE, () => {
             // Enable controls and start game when countdown completes
             this.#isGameStarted = true;
             this.#dino.setControlsEnabled(true);
             this.#dino.play('dino-run');
             this.#ground.setScrollSpeed(this.#difficultyManager.getCurrentSpeed());
+            this.#soundManager.playGameMusic();
         });
 
         // Make the dino collide with the platform
         this.physics.add.collider(this.#dino, this.#platform);
 
         // Create difficulty manager
-        this.#difficultyManager = new DifficultyManager();
+        this.#difficultyManager = new DifficultyManager(this);
 
         // Create enemy group with physics
         this.#enemies = this.add.group({
@@ -764,6 +781,8 @@ export class Game extends Phaser.Scene {
             if (this.#fullscreenButton) {
                 this.#fullscreenButton.setVisible(false);
             }
+
+            this.#soundManager.pauseGameMusic();
         }
         else {
             // Hide pause overlay immediately
@@ -789,6 +808,9 @@ export class Game extends Phaser.Scene {
 
                 // Resume ground scrolling with current difficulty speed
                 this.#ground.setScrollSpeed(this.#difficultyManager.getCurrentSpeed());
+
+                // Resume game music after countdown
+                this.#soundManager.resumeGameMusic();
 
                 // Resume all enemies
                 this.#enemies.getChildren().forEach((enemy) => {
@@ -841,7 +863,7 @@ export class Game extends Phaser.Scene {
             this.#fullscreenButton.setFrame(frame);
         }
         catch (error) {
-            console.warn('Fullscreen request failed:', error);
+            logger.warn('Fullscreen request failed:', error);
         }
     }
 
@@ -979,6 +1001,9 @@ export class Game extends Phaser.Scene {
      * @param {number} delta - The delta time in milliseconds since the last update
      */
     update(time, delta) {
+        // Call base class method first
+        super.update(time, delta);
+
         // Don't update game objects if game over
         if (this.#isGameOver) {
             return;
@@ -1000,7 +1025,7 @@ export class Game extends Phaser.Scene {
 
         // Get time scales
         const slowMotionScale = this.anims.globalTimeScale;
-        const gameSpeed = this.#difficultyManager.getCurrentSpeed() / 280; // Normalise by base speed
+        const gameSpeed = this.#difficultyManager.getCurrentSpeed() / this.#difficultyManager.getBaseSpeed(); // Normalise by base speed
         const slowMotionDelta = delta * slowMotionScale;
         const gameSpeedDelta = slowMotionDelta * gameSpeed;
 
@@ -1111,6 +1136,14 @@ export class Game extends Phaser.Scene {
     }
 
     /**
+     * Gets the sound manager instance
+     * @returns {SoundManager} The sound manager
+     */
+    getSoundManager() {
+        return this.#soundManager;
+    }
+
+    /**
      * Handles what happens when our dino bumps into any enemy
      * Game over! Time to try again!
      *
@@ -1139,7 +1172,7 @@ export class Game extends Phaser.Scene {
         }
 
         // Play death animation
-        dino.play('dino-dead');
+        dino.die();
 
         // Stop game physics
         this.physics.pause();
@@ -1316,6 +1349,8 @@ export class Game extends Phaser.Scene {
                 this.#restartGame();
             });
         }
+
+        this.#soundManager.stopAll();
     }
 
     /**

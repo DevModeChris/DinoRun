@@ -1,21 +1,14 @@
 /**
- * ⏱️ The CountdownSystem handles game start and resume countdowns!
- *
- * This system creates a nice countdown display to give players time
- * to get ready before the action starts.
+ * ⏲️ The CountdownSystem gives players a moment to get ready
+ * before the action starts.
  */
-import Phaser from 'phaser';
+import { GameEvents } from '../constants/game-events.js';
+
+/**
+ * @typedef {import('./event-manager.js').IEventEmitter} IEventEmitter
+ */
 
 export class CountdownSystem {
-    /** @type {string} */
-    static EVENT_COUNTDOWN_START = 'countdown-start';
-
-    /** @type {string} */
-    static EVENT_COUNTDOWN_TICK = 'countdown-tick';
-
-    /** @type {string} */
-    static EVENT_COUNTDOWN_COMPLETE = 'countdown-complete';
-
     /** @type {Phaser.Scene} */
     #scene;
 
@@ -37,27 +30,19 @@ export class CountdownSystem {
     /** @type {Phaser.Time.TimerEvent} */
     #countdownTimer;
 
-    /** @type {Phaser.Events.EventEmitter} */
+    /** @type {IEventEmitter} */
     #events;
 
     /**
      * Creates a new countdown system
      *
      * @param {Phaser.Scene} scene - The scene this system belongs to
+     * @param {IEventEmitter} events - The event emitter to use
      */
-    constructor(scene) {
+    constructor(scene, events) {
         this.#scene = scene;
-        this.#events = new Phaser.Events.EventEmitter();
+        this.#events = events;
         this.#createCountdownDisplay();
-    }
-
-    /**
-     * Gets the event emitter for this system
-     *
-     * @returns {Phaser.Events.EventEmitter} The event emitter
-     */
-    getEvents() {
-        return this.#events;
     }
 
     /**
@@ -103,7 +88,7 @@ export class CountdownSystem {
         this.#updateDisplay();
 
         // Emit countdown start event
-        this.#events.emit(CountdownSystem.EVENT_COUNTDOWN_START);
+        this.#events.emit(GameEvents.COUNTDOWN_START);
 
         // Create the countdown timer
         this.#countdownTimer = this.#scene.time.addEvent({
@@ -156,14 +141,14 @@ export class CountdownSystem {
             this.#updateDisplay();
 
             // Emit countdown tick event
-            this.#events.emit(CountdownSystem.EVENT_COUNTDOWN_TICK, this.#currentCount);
+            this.#events.emit(GameEvents.COUNTDOWN_TICK, this.#currentCount);
         }
         else {
             this.#container.setVisible(false);
             this.#isCountingDown = false;
 
             // Emit countdown complete event before callback
-            this.#events.emit(CountdownSystem.EVENT_COUNTDOWN_COMPLETE);
+            this.#events.emit(GameEvents.COUNTDOWN_COMPLETE);
 
             if (this.#onCompleteCallback) {
                 this.#onCompleteCallback();

@@ -4,6 +4,7 @@
  * These rocks are like nature's hurdles in our dino's running track.
  */
 import { Obstacle } from './obstacle';
+import { logger } from '../../utils/logger.js';
 
 export class SmallRock extends Obstacle {
     /** @type {string[]} */
@@ -52,7 +53,7 @@ export class SmallRock extends Obstacle {
         // Get the frame dimensions for this specific rock variant
         const frame = scene.textures.getFrame('obstacle-small-rocks-sprites', frameKey);
         if (!frame) {
-            console.error('🚨 Could not get frame data for rock variant:', frameKey);
+            logger.error('Could not get frame data for rock variant:', frameKey);
 
             return;
         }

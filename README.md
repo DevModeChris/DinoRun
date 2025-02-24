@@ -116,12 +116,13 @@ DinoRun/
 │   │   ├── audio/        # Sound effects and music
 │   │   └── fonts/        # Custom game fonts
 │   ├── game/
+│   │   ├── constants/    # Game constants
 │   │   ├── scenes/       # Game scenes
 │   │   ├── objects/      # Game object classes
 │   │   ├── systems/      # Game system classes, managers, etc.
 │   │   └── config.js     # Game configuration
-│   ├── utils/
-│   │   └── helpers.js    # Utility functions
+│   ├── utils/            # Utility classes
+│   │   ├── helpers.js    # Helper functions
 │   └── main.js           # Entry point
 ├── index.html            # Main HTML file
 ├── vite.config.js        # Vite configuration

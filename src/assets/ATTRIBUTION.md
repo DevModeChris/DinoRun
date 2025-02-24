@@ -5,10 +5,10 @@ Please respect the individual licenses and attribution requirements for each ass
 
 ## Audio
 
-### Loopable Background Music
-- **Creator:** jhaeka
-- **Source:** https://joshuuu.itch.io/short-loopable-background-music
-- **License:** Creative Commons Zero (CC0) | Free for personal and commercial use
+### Main Game Music - OFDN_Victory_Party
+- **Creator:** Of Far Different Nature
+- **Source:** https://fardifferent.itch.io/loops
+- **License:** Creative Commons Attribution v4.0 | Free for personal and commercial use
 
 ## Fonts
 

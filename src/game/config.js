@@ -33,7 +33,7 @@ export const gameConfig = {
         width: BASE_WIDTH,
         height: BASE_HEIGHT,
         expandParent: true,
-        autoRound: true,
+        autoRound: false,
         autoCenter: Phaser.Scale.CENTER_BOTH,
     },
 
@@ -46,14 +46,14 @@ export const gameConfig = {
         },
     },
 
-    // The scenes that make up our game
+    // The scenes that make up our game in order
     scene: [Bootloader, Game],
 
     // Enable pixel art mode for crisp graphics
     render: {
         pixelArt: true,
         antialias: false,
-        roundPixels: true,
+        roundPixels: false,
         autoMobilePipeline: true,
     },
 };
