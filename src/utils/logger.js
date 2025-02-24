@@ -35,8 +35,8 @@ export class Logger {
         }
 
         // TODO: Move control of these settings to the in-game developer settings menu
-        this.#debugLogging = true;
-        this.#loggingEnabled = true;
+        this.#debugLogging = false;
+        this.#loggingEnabled = false;
         this.#logLevels = {
             TRACE: '🔬 TRACE',  // Most detailed level for frequent updates
             DEBUG: '🔍 DEBUG',   // Helpful for development
