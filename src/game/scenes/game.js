@@ -91,8 +91,8 @@ export class Game extends BaseScene {
     /** @type {number} */
     #groundCollisionHeight = Ground.COLLISION_HEIGHT;
 
-    /** @type {Phaser.GameObjects.Text} */
-    #gameOverText;
+    /** @type {Phaser.GameObjects.Container} */
+    #gameOverOverlay;
 
     /** @type {boolean} */
     #isMobile = false;
@@ -272,15 +272,13 @@ export class Game extends BaseScene {
         // Initialise score display
         this.#scoreManager = new ScoreManager(this, 0, 0);
 
-        // Create game over text (hidden initially)
-        this.#createGameOverText();
-
         // Create debug text (hidden initially)
         this.#createDebugText();
 
         // Create buttons UI
         this.#createButtonsUI();
         this.#createPauseOverlay();
+        this.#createGameOverOverlay(0, 0, false);
 
         // Register with the camera manager as a game element
         this.#cameraManager.registerGameElement(this.#dino);
@@ -640,10 +638,22 @@ export class Game extends BaseScene {
                 .setScale(scale);
         }
 
-        // Update game over text
-        if (this.#gameOverText) {
-            this.#gameOverText
-                .setPosition(width / 2, height / 2);
+        // Update game over overlay
+        if (this.#gameOverOverlay) {
+            const background = this.#gameOverOverlay.list[0];
+            background.setSize(width, height);
+
+            const gameOverHeader = this.#gameOverOverlay.list[1];
+            gameOverHeader.setPosition(width / 2, height * 0.25);
+
+            const scoreText = this.#gameOverOverlay.list[2];
+            scoreText.setPosition(width / 2, gameOverHeader.y + 60);
+
+            const restartButton = this.#gameOverOverlay.list[3];
+            restartButton.setPosition(width / 2, scoreText.y + 80);
+
+            const returnToMenuButton = this.#gameOverOverlay.list[4];
+            returnToMenuButton.setPosition(width / 2, restartButton.y + 60);
         }
 
         // Update pause overlay if it exists
@@ -686,7 +696,7 @@ export class Game extends BaseScene {
         // Create an array of all UI elements
         const uiElements = [
             this.#scoreManager.getScoreTextElms(),
-            this.#gameOverText,
+            this.#gameOverOverlay,
             this.#debugText,
             this.#pauseOverlay,
             this.#pauseHeader,
@@ -787,13 +797,192 @@ export class Game extends BaseScene {
     }
 
     /**
-     * Creates the game over text
+     * Creates the game over overlay
+     *
+     * @param {number} finalScore - The final score achieved
+     * @param {number} highScore - The current high score
+     * @param {boolean} beatHighScore - Whether the high score was beaten
      */
-    #createGameOverText() {
-        // Create container for game over text
-        this.#gameOverText = this.add.container(this.scale.width / 2, this.scale.height / 2);
-        this.#gameOverText.setDepth(1000)
+    #createGameOverOverlay(finalScore, highScore, beatHighScore) {
+        const { width, height } = this.scale;
+
+        // Create a semi-transparent black overlay
+        this.#gameOverOverlay = this.add.container(0, 0)
+            .setScrollFactor(0)
+            .setDepth(900)
             .setVisible(false);
+
+        // Add semi-transparent background
+        const background = this.add.rectangle(
+            0,
+            0,
+            width,
+            height,
+            0x000000,
+            0.5,
+        )
+            .setOrigin(0, 0)
+            .setInteractive(); // Block input
+
+        // Add Game Over header text
+        const gameOverHeader = this.add.text(
+            width / 2,
+            height * 0.10,
+            'GAME OVER',
+            {
+                fontFamily: 'grandstander-bold',
+                fontSize: '52px',
+                color: '#ffffff',
+                align: 'center',
+                stroke: '#000000',
+                strokeThickness: 5,
+            },
+        ).setOrigin(0.5);
+
+        // Add score text
+        const scoreText = this.add.text(
+            width / 2,
+            gameOverHeader.y + 60,
+            `Score: ${finalScore}m`,
+            {
+                fontFamily: 'grandstander',
+                fontSize: '32px',
+                color: '#ffffff',
+                align: 'center',
+                stroke: '#000000',
+                strokeThickness: 3,
+            },
+        ).setOrigin(0.5);
+
+        // Add high score celebration if achieved
+        let highScoreText;
+        if (beatHighScore) {
+            highScoreText = this.add.text(
+                width / 2,
+                scoreText.y + 50,
+                'NEW HIGH SCORE!',
+                {
+                    fontFamily: 'grandstander',
+                    fontSize: '40px',
+                    fill: '#FFD700',
+                    align: 'center',
+                    stroke: '#AD9203',
+                    strokeThickness: 3,
+                    shadow: {
+                        offsetX: 0,
+                        offsetY: 0,
+                        color: '#FFD70080',
+                        blur: 6,
+                        stroke: true,
+                        fill: true,
+                    },
+                },
+            ).setOrigin(0.5);
+
+            // Add floating animation
+            this.tweens.add({
+                targets: highScoreText,
+                scaleX: 1.1,
+                scaleY: 1.1,
+                duration: 1000,
+                yoyo: true,
+                repeat: -1,
+                ease: 'Sine.easeInOut',
+            });
+
+            // Create celebration particles
+            const emitter = this.add.particles(0, 0, 'particle', {
+                x: width / 2,
+                y: scoreText.y + 50, // Position at high score text
+                lifespan: 4000,
+                speed: { min: 100, max: 300 },
+                scale: { start: 0.8, end: 0 },
+                gravityY: 0,
+                quantity: 4,
+                frequency: 50,
+                blendMode: 'ADD',
+                tint: [0xffff00, 0xff00ff, 0x00ffff, 0xff0000],
+                angle: { min: 0, max: 360 }, // Emit in all directions
+                rotate: { min: 0, max: 360 }, // Particles spin as they move
+            });
+
+            // Register the emitter with the main camera
+            this.#cameraManager.registerUIElement(emitter);
+
+            // Stop emitting after 20 seconds
+            this.time.delayedCall(20000, () => {
+                emitter.stop();
+
+                // Remove the emitter after it's done
+                this.time.delayedCall(1000, () => {
+                    emitter.destroy();
+                });
+            });
+        }
+
+        // Create temporary buttons to measure their widths
+        const tempRestart = this.add.text(
+            0,
+            0,
+            'Play Again',
+            {
+                fontFamily: 'grandstander',
+                fontSize: '26px',
+                padding: { x: 20, y: 10 },
+            },
+        );
+
+        const tempReturnToMenu = this.add.text(
+            0,
+            0,
+            'Return to Menu',
+            {
+                fontFamily: 'grandstander',
+                fontSize: '26px',
+                padding: { x: 20, y: 10 },
+            },
+        );
+
+        // Calculate the maximum width needed
+        const maxButtonWidth = Math.max(tempRestart.width, tempReturnToMenu.width);
+
+        // Destroy temporary text objects
+        tempRestart.destroy();
+        tempReturnToMenu.destroy();
+
+        // Create the actual buttons with consistent width
+        const restartButton = this.#createMenuButton('Play Again', maxButtonWidth);
+        restartButton.on('pointerup', () => {
+            this.#soundManager.playButtonSound();
+            this.#restartGame();
+        });
+
+        const returnToMenuButton = this.#createMenuButton('Return to Menu', maxButtonWidth);
+        returnToMenuButton.on('pointerup', () => {
+            this.#soundManager.playButtonSound();
+            this.#returnToMenu();
+        });
+
+        // Position buttons
+        const buttonY = beatHighScore ? highScoreText.y + 80 : scoreText.y + 80;
+        restartButton.setPosition(width / 2, buttonY);
+        returnToMenuButton.setPosition(width / 2, buttonY + 60);
+
+        // Add all elements to the container
+        this.#gameOverOverlay.add([
+            background,
+            gameOverHeader,
+            scoreText,
+            restartButton,
+            returnToMenuButton,
+        ]);
+
+        if (beatHighScore) {
+            this.#gameOverOverlay.add(highScoreText);
+        }
+
+        // Register with camera manager
+        this.#cameraManager.registerUIElement(this.#gameOverOverlay);
     }
 
     /**
@@ -1277,146 +1466,16 @@ export class Game extends BaseScene {
         const highScore = this.#scoreManager.getHighScore();
         const beatHighScore = finalScore >= highScore && finalScore > 0;
 
-        // Clear any existing game over text
-        if (this.#gameOverText) {
-            this.#gameOverText.removeAll(true);
+        // Clear any existing game over overlay
+        if (this.#gameOverOverlay) {
+            this.#gameOverOverlay.destroy();
         }
 
-        const message = this.#isMobile ? 'Tap to Play Again' : 'Press SPACE to Play Again';
-        const scoreText = `Score: ${finalScore}m`;
-        const gameOverLines = ['GAME OVER', scoreText];
+        // Create new game over overlay
+        this.#createGameOverOverlay(finalScore, highScore, beatHighScore);
 
-        // Add celebration message if high score was beaten
-        if (beatHighScore) {
-            gameOverLines.splice(1, 0, 'NEW HIGH SCORE!');
-        }
-
-        gameOverLines.push(message);
-
-        // Set different font sizes for each line
-        const textConfig = {
-            fontFamily: 'grandstander',
-            fill: '#ffffff',
-            align: 'center',
-            lineSpacing: 20,
-            stroke: '#000000',
-            strokeThickness: 3,
-        };
-
-        // Apply different font sizes to each line
-        let currentY = 0;
-        const lineSpacing = 20;
-        let highScoreTextY = 0;
-
-        gameOverLines.forEach((line, index) => {
-            let fontSize = 32; // Default size for most lines
-            let textStyle = {
-                ...textConfig,
-                fontSize: `${fontSize}px`,
-            };
-
-            if (index === 0) {
-                fontSize = 52; // "GAME OVER"
-                textStyle.fontFamily = 'grandstander-bold';
-                textStyle.fontSize = `${fontSize}px`;
-                textStyle.strokeThickness = 5;
-            }
-            else if (line.includes('NEW HIGH SCORE')) {
-                fontSize = 40; // High score celebration
-                textStyle = {
-                    ...textStyle,
-                    fontSize: `${fontSize}px`,
-                    fill: '#FFD700', // Gold
-                    stroke: '#AD9203',
-                    strokeThickness: 3,
-                    shadow: {
-                        offsetX: 0,
-                        offsetY: 0,
-                        color: '#FFD700',
-                        blur: 6,
-                        stroke: true,
-                        fill: true,
-                    },
-                };
-                highScoreTextY = currentY;
-
-                // Create a subtle floating animation
-                const lineText = this.add.text(0, currentY, line, textStyle)
-                    .setOrigin(0.5)
-                    .setData('originalSize', fontSize);
-
-                // Subtle scale pulse animation
-                this.tweens.add({
-                    targets: lineText,
-                    scaleX: 1.1,
-                    scaleY: 1.1,
-                    duration: 1000,
-                    ease: 'Sine.easeInOut',
-                    yoyo: true,
-                    repeat: -1,
-                });
-
-                this.#gameOverText.add(lineText);
-                currentY += fontSize + lineSpacing;
-
-                return; // Skip the default text creation
-            }
-            else if (line.includes('Score:')) {
-                fontSize = 36; // Score display
-                textStyle.fontSize = `${fontSize}px`;
-            }
-
-            const lineText = this.add.text(0, currentY, line, textStyle)
-                .setOrigin(0.5)
-                .setData('originalSize', fontSize); // Store original size for scaling
-
-            this.#gameOverText.add(lineText);
-            currentY += fontSize + lineSpacing;
-        });
-
-        // Center the container's content vertically
-        const totalHeight = currentY - lineSpacing;
-        this.#gameOverText.list.forEach((text) => {
-            text.y -= totalHeight / 2;
-        });
-
-        // Create celebration particles if high score was beaten
-        if (beatHighScore) {
-            const width = this.scale.width;
-            const height = this.scale.height;
-            const particleY = (height / 2) + (highScoreTextY - (totalHeight / 2));
-
-            const emitter = this.add.particles(0, 0, 'particle', {
-                x: width / 2,
-                y: particleY,
-                lifespan: 4000,
-                speed: { min: 100, max: 300 },
-                scale: { start: 0.8, end: 0 },
-                gravityY: 0,
-                quantity: 4,
-                frequency: 50,
-                blendMode: 'ADD',
-                tint: [0xffff00, 0xff00ff, 0x00ffff, 0xff0000],
-                angle: { min: 0, max: 360 }, // Emit in all directions
-                rotate: { min: 0, max: 360 }, // Particles spin as they move
-            });
-
-            // Register the emitter with the main camera
-            this.#cameraManager.registerUIElement(emitter);
-
-            // Stop emitting after 10 seconds
-            this.time.delayedCall(20000, () => {
-                emitter.stop();
-
-                // Remove the emitter after it's done
-                this.time.delayedCall(1000, () => {
-                    emitter.destroy();
-                });
-            });
-        }
-
-        // Show game over text with score
-        this.#gameOverText.setVisible(true);
+        // Show game over overlay
+        this.#gameOverOverlay.setVisible(true);
 
         // Hide in-game UI elements
         this.#pauseButton.setVisible(false);
@@ -1427,21 +1486,6 @@ export class Game extends BaseScene {
         // Now reset the score and difficulty for the next game
         this.#scoreManager.reset();
         this.#difficultyManager.reset();
-
-        // Listen for restart input
-        if (this.#isMobile) {
-            // Listen for tap to restart
-            this.input.once('pointerdown', () => {
-                this.#restartGame();
-            });
-        }
-        else {
-            // Listen for space to restart
-            this.input.keyboard.once('keydown-SPACE', () => {
-                this.#restartGame();
-            });
-        }
-
         this.#soundManager.stopAll();
     }
 
@@ -1453,9 +1497,8 @@ export class Game extends BaseScene {
         this.shutdown();
 
         // Clean up existing objects
-        if (this.#gameOverText) {
-            this.#gameOverText.destroy();
-            this.#gameOverText = null;
+        if (this.#gameOverOverlay) {
+            this.#gameOverOverlay.destroy();
         }
 
         // Reset game state
