@@ -92,10 +92,10 @@ export class Bird extends Phaser.GameObjects.Sprite {
     /**
      * Updates the bird's position based on game speed and delta time
      *
-     * @param {number} time - Time since last update in milliseconds
-     * @param {number} delta - Time since last update in milliseconds
+     * @param {number} _time - Time since last update in milliseconds
+     * @param {number} _delta - Time since last update in milliseconds
      */
-    update(time, delta) {
+    update(_time, _delta) {
         // If the bird is not active, skip update
         if (!this.active) {
             return;

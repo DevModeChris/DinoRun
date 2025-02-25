@@ -15,4 +15,9 @@ export const GameEvents = {
     MUSIC_STOP: 'music-stop',
     MUSIC_PAUSE: 'music-pause',
     MUSIC_RESUME: 'music-resume',
+
+    // Settings Events ⚙️
+    SETTINGS_UPDATED: 'settings-updated',
+    DEVELOPER_SETTINGS_UPDATED: 'developer-settings-updated',
+    AUDIO_SETTINGS_UPDATED: 'audio-settings-updated',
 };

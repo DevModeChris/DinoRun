@@ -128,7 +128,7 @@ export class SkySystem {
         MAX_ALPHA: 1,         // Maximum star brightness
         TWINKLE_SPEED_MIN: 1, // Minimum twinkle speed multiplier
         TWINKLE_SPEED_MAX: 3, // Maximum twinkle speed multiplier
-        Y_SPAWN_AREA: 0.9,    // Percentage of sky the stars spawn in (Top 90%)
+        Y_SPAWN_AREA: 1.0,    // Percentage of sky the stars spawn in (Full height)
     };
 
     /**
@@ -1175,27 +1175,56 @@ export class SkySystem {
             this.#scene.scale.off('resize', this.#resizeListener);
         }
 
+        // Stop all weather effects
+        if (this.#rainEmitter) {
+            this.#rainEmitter.stop();
+            this.#rainEmitter.remove();
+        }
+        if (this.#dustEmitter) {
+            this.#dustEmitter.stop();
+            this.#dustEmitter.remove();
+        }
+
         // Clean up all components
         if (this.#skyGradient && !this.#skyGradient.destroyed) {
             this.#skyGradient.destroy();
+            this.#skyGradient = null;
         }
         if (this.#lighting && !this.#lighting.destroyed) {
             this.#lighting.destroy();
+            this.#lighting = null;
         }
         if (this.#starContainer && !this.#starContainer.destroyed) {
+            // Destroy all star sprites first
+            this.#stars.forEach(({ star }) => star.destroy());
             this.#starContainer.destroy();
+            this.#starContainer = null;
         }
         if (this.#auroraGraphics && !this.#auroraGraphics.destroyed) {
             this.#auroraGraphics.destroy();
+            this.#auroraGraphics = null;
         }
         if (this.#cloudGraphics && !this.#cloudGraphics.destroyed) {
             this.#cloudGraphics.destroy();
+            this.#cloudGraphics = null;
         }
 
         // Clear arrays
         this.#stars = [];
         this.#auroraWaves = [];
         this.#clouds = [];
+
+        // Clear timers
+        this.#weatherTimer = 0;
+        this.#lastSpawnCheck = 0;
+
+        // Remove scene shutdown listener
+        if (this.#scene && this.#scene.events) {
+            this.#scene.events.off('shutdown', this.destroy, this);
+        }
+
+        // Clear scene reference
+        this.#scene = null;
     }
 
     /**

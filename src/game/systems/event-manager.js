@@ -4,7 +4,6 @@
  * It helps all our game systems talk to each other in an organised way.
  */
 import Phaser from 'phaser';
-import { logger } from '../../utils/logger.js';
 
 /**
  * @typedef {Object} IEventEmitter
@@ -33,6 +32,9 @@ export class EventManager {
     /** @type {Map<string, Set<Function>>} */
     #listenerMap = new Map();
 
+    /** @type {Object} Lazy-loaded logger instance */
+    #logger = null;
+
     /**
      * Creates our central event management system
      *
@@ -43,8 +45,6 @@ export class EventManager {
             throw new Error('EventManager is a singleton - use EventManager.getInstance()');
         }
         this.#emitter = new Phaser.Events.EventEmitter();
-        logger.setContext({ sys: 'event-manager' });
-        logger.debug('EventManager initialised');
     }
 
     /**
@@ -61,6 +61,25 @@ export class EventManager {
     }
 
     /**
+     * Gets our logger instance, loading it if needed
+     *
+     * @private
+     * @returns {Object} The logger instance
+     */
+    #getLogger() {
+        if (!this.#logger) {
+            // Lazy-load the logger to avoid circular dependency
+            import('../../utils/logger.js').then((module) => {
+                this.#logger = module.logger;
+                this.#logger.setContext({ sys: 'event-manager' });
+                this.#logger.debug('EventManager initialised');
+            });
+        }
+
+        return this.#logger;
+    }
+
+    /**
      * Adds a listener for an event
      *
      * @param {string} event - The event to listen for
@@ -74,7 +93,11 @@ export class EventManager {
 
         this.#listenerMap.get(event).add(fn);
         this.#emitter.on(event, fn, context);
-        logger.debug(`Added listener for event: ${event}, total listeners: ${this.#listenerMap.get(event).size}`);
+
+        const logger = this.#getLogger();
+        if (logger) {
+            logger.debug(`Added listener for event: ${event}, total listeners: ${this.#listenerMap.get(event).size}`);
+        }
     }
 
     /**
@@ -89,39 +112,49 @@ export class EventManager {
             listeners.delete(fn);
             if (listeners.size === 0) {
                 this.#listenerMap.delete(event);
-                logger.debug(`Removed last listener for event: ${event}`);
+                const logger = this.#getLogger();
+                if (logger) {
+                    logger.debug(`Removed last listener for event: ${event}`);
+                }
             }
             else {
-                logger.debug(`Removed listener for event: ${event}, remaining listeners: ${listeners.size}`);
+                const logger = this.#getLogger();
+                if (logger) {
+                    logger.debug(`Removed listener for event: ${event}, remaining listeners: ${listeners.size}`);
+                }
             }
         }
         this.#emitter.off(event, fn);
     }
 
     /**
-     * Emits an event with optional data
+     * Emits an event for all listeners to hear
      *
-     * @param {string} event - The event to trigger
-     * @param {...*} args - Any data to send with the event
+     * @param {string} event - The event to emit
+     * @param {...any} args - Arguments to pass to the listeners
      */
     emit(event, ...args) {
-        const listeners = this.#listenerMap.get(event);
-        const listenerCount = listeners ? listeners.size : 0;
-        logger.debug(`Emitting event: ${event}, listeners: ${listenerCount}, args: ${JSON.stringify(args)}`);
         this.#emitter.emit(event, ...args);
+        const logger = this.#getLogger();
+        if (logger) {
+            const listeners = this.#listenerMap.get(event);
+            const listenerCount = listeners ? listeners.size : 0;
+            logger.debug(`Emitting event: ${event}, listeners: ${listenerCount}, args: ${JSON.stringify(args)}`);
+        }
     }
 
     /**
      * Removes all listeners for an event
      *
-     * @param {string} event - The event to clear listeners for
+     * @param {string} event - The event to remove listeners for
      */
     removeAllListeners(event) {
-        if (this.#listenerMap.has(event)) {
-            logger.debug(`Removing all listeners for event: ${event}`);
-            this.#listenerMap.delete(event);
-        }
+        this.#listenerMap.delete(event);
         this.#emitter.removeAllListeners(event);
+        const logger = this.#getLogger();
+        if (logger) {
+            logger.debug(`Removed all listeners for event: ${event}`);
+        }
     }
 
     /**

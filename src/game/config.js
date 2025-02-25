@@ -5,6 +5,7 @@
 import Phaser from 'phaser';
 import { Bootloader } from './scenes/bootloader.js';
 import { Game } from './scenes/game.js';
+import { Menu } from './scenes/menu.js';
 
 // Base dimensions for scaling calculations (16:9 aspect ratio)
 export const BASE_WIDTH = 1280;
@@ -18,7 +19,7 @@ export const gameConfig = {
     title: 'Dino Run',
 
     // The version of our game
-    version: '0.3.12 (270125)',
+    version: '0.4.4 (250225)',
 
     // Hide the Phaser logo
     banner: {
@@ -47,7 +48,11 @@ export const gameConfig = {
     },
 
     // The scenes that make up our game in order
-    scene: [Bootloader, Game],
+    scene: [
+        Bootloader,
+        Menu,
+        Game,
+    ],
 
     // Enable pixel art mode for crisp graphics
     render: {

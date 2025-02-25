@@ -174,7 +174,7 @@ export class Bootloader extends BaseScene {
 
         this.#loadAudioFiles = () => {
             // Load music files
-            this.load.audio('music_menu', 'src/assets/audio/music/menu.ogg');
+            this.load.audio('music_menu', 'src/assets/audio/music/OFDN_Eternal_Explorer.ogg');
             this.load.audio('music_game', 'src/assets/audio/music/OFDN_Victory_Party.ogg');
 
             // Load sfx files
@@ -182,6 +182,9 @@ export class Bootloader extends BaseScene {
             this.load.audio('sfx_player_jump', 'src/assets/audio/player/jump.ogg');
             this.load.audio('sfx_player_land', 'src/assets/audio/player/land.ogg');
             this.load.audio('sfx_player_death', 'src/assets/audio/player/death.ogg');
+
+            // Load UI files
+            this.load.audio('sfx_ui_button', 'src/assets/audio/ui/button.ogg');
         };
 
         this.#loadFonts = () => {
@@ -209,9 +212,9 @@ export class Bootloader extends BaseScene {
             this.load.start();
 
             this.load.once('complete', () => {
-                // Small delay before starting game to ensure everything is ready
+                // Small delay before starting menu to ensure everything is ready
                 this.time.delayedCall(500, () => {
-                    this.scene.start('Game');
+                    this.scene.start('Menu');
                 });
             });
         };

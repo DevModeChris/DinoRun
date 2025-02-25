@@ -16,6 +16,7 @@ import { DifficultyManager } from '../systems/difficulty-manager.js';
 import { CameraManager } from '../systems/camera-manager.js';
 import { CountdownSystem } from '../systems/countdown-system.js';
 import { SoundManager } from '../systems/sound-manager.js';
+import { SettingsManager } from '../systems/settings-manager.js';
 import { checkIfMobile } from '../../utils/helpers.js';
 import { logger } from '../../utils/logger.js';
 import { createEventEmitter } from '../systems/event-manager.js';
@@ -125,17 +126,34 @@ export class Game extends BaseScene {
      */
     constructor() {
         super({ key: 'Game' });
+
+        // Load initial detective mode setting 🔍
+        this.#updateDebugMode(SettingsManager.getSettings().developer.debugMode);
+
+        // 🔍 Listen for when someone turns detective mode on or off
+        SettingsManager.subscribe(GameEvents.DEVELOPER_SETTINGS_UPDATED, (settings) => {
+            try {
+                if ('debugMode' in settings) {
+                    this.#updateDebugMode(settings.debugMode);
+                    logger.debug(`Detective mode ${this.#debugMode ? 'activated' : 'deactivated'} 🔍`);
+                }
+            }
+            catch (error) {
+                logger.error('Oops! Something went wrong with detective mode:', error);
+            }
+        });
     }
 
     /**
      * Clean up any active timers and events
      */
-    #cleanup() {
+    shutdown() {
         // Clean up all spawn timers
         for (const timer of this.#spawnTimers.values()) {
             timer.destroy();
         }
         this.#spawnTimers.clear();
+        this.#lastSpawnTimes = {};
 
         // Destroy any active particle managers
         const particleManagers = this.add.particles.list;
@@ -144,6 +162,44 @@ export class Game extends BaseScene {
                 manager.destroy();
             });
         }
+
+        // Properly destroy the sky system
+        if (this.#skySystem) {
+            this.#skySystem.destroy();
+            this.#skySystem = null;
+        }
+
+        // Stop any active countdown
+        if (this.#countdownSystem) {
+            this.#countdownSystem.stopCountdown();
+            this.#countdownSystem = null;
+        }
+
+        // Clean up debug graphics
+        if (this.physics?.world?.debugGraphic) {
+            this.physics.world.debugGraphic.destroy();
+        }
+
+        // Reset game state
+        this.#isGameOver = false;
+        this.#isPaused = false;
+        this.#isGameStarted = false;
+        this.anims.globalTimeScale = 1;
+
+        // Reset all managers
+        if (this.#scoreManager) {
+            this.#scoreManager.reset();
+        }
+        if (this.#difficultyManager) {
+            this.#difficultyManager.reset();
+        }
+
+        // Stop all running timers and tweens
+        this.time.removeAllEvents();
+        this.tweens.killAll();
+
+        // Call parent shutdown
+        super.shutdown();
     }
 
     /**
@@ -156,13 +212,16 @@ export class Game extends BaseScene {
         const { width, height } = this.scale;
         const events = createEventEmitter();
 
+        // Make sure we clean up properly when the scene shuts down
+        this.events.once('shutdown', this.shutdown, this);
+
         // Create camera manager before other game objects
         this.#cameraManager = new CameraManager(this, events);
 
         // Check if we're on mobile
         this.#isMobile = checkIfMobile();
 
-        // Create sky background
+        // Create sky system first so it's behind everything
         this.#skySystem = new SkySystem(this);
 
         // Create the visual scrolling ground
@@ -173,7 +232,7 @@ export class Game extends BaseScene {
         this.#platform = this.add.rectangle(0, 0, width, this.#groundCollisionHeight);
         this.physics.add.existing(this.#platform, true);
 
-        // Initialize managers before creating game objects
+        // Initialise managers before creating game objects
         this.#soundManager = new SoundManager(this, events);
         this.#countdownSystem = new CountdownSystem(this, events);
 
@@ -266,16 +325,10 @@ export class Game extends BaseScene {
         this.#debugKey = keys.TAB;
         this.#pauseKey = keys.P;
 
-        // Enable debug mode to see collision boxes
+        // Enable debug graphics
         this.physics.world.createDebugGraphic();
         const debugGraphic = this.physics.world.debugGraphic;
         debugGraphic.visible = this.#debugMode;
-
-        // Enable debug text if debug mode is active
-        if (this.#debugMode) {
-            this.#debugText.setVisible(this.#debugMode);
-            this.#debugText.background.setVisible(this.#debugMode);
-        }
 
         // Register debug graphics with main camera only
         if (debugGraphic) {
@@ -284,6 +337,9 @@ export class Game extends BaseScene {
 
         // Start the game with countdown
         this.#startGameWithCountdown();
+
+        // Make sure debug mode is properly initialized
+        this.#updateDebugMode(this.#debugMode);
     }
 
     /**
@@ -309,7 +365,9 @@ export class Game extends BaseScene {
             },
         )
             .setOrigin(0.5)
-            .setInteractive({ useHandCursor: true });
+            .setInteractive({ useHandCursor: true })
+            .on('pointerover', () => button.setBackgroundColor('#4a4a4a'))
+            .on('pointerout', () => button.setBackgroundColor('#222222'));
 
         return button;
     }
@@ -375,22 +433,42 @@ export class Game extends BaseScene {
             },
         );
 
+        const tempReturnToMenu = this.add.text(
+            0,
+            0,
+            'Return to Menu',
+            {
+                fontFamily: 'grandstander',
+                fontSize: '26px',
+                padding: { x: 20, y: 10 },
+            },
+        );
+
         // Calculate the maximum width needed
-        const maxButtonWidth = Math.max(tempContinue.width, tempRestart.width);
+        const maxButtonWidth = Math.max(tempContinue.width, tempRestart.width, tempReturnToMenu.width);
 
         // Destroy temporary text objects
         tempContinue.destroy();
         tempRestart.destroy();
+        tempReturnToMenu.destroy();
 
         // Create the actual buttons with consistent width
         const continueButton = this.#createMenuButton('Continue', maxButtonWidth);
         continueButton.on('pointerup', () => {
+            this.#soundManager.playButtonSound();
             this.#togglePause();
         });
 
         const restartButton = this.#createMenuButton('Restart', maxButtonWidth);
         restartButton.on('pointerup', () => {
+            this.#soundManager.playButtonSound();
             this.#restartGame();
+        });
+
+        const returnToMenuButton = this.#createMenuButton('Return to Menu', maxButtonWidth);
+        returnToMenuButton.on('pointerup', () => {
+            this.#soundManager.playButtonSound();
+            this.#returnToMenu();
         });
 
         // Version text
@@ -411,6 +489,7 @@ export class Game extends BaseScene {
             this.#pauseHeader,
             continueButton,
             restartButton,
+            returnToMenuButton,
             versionText,
         ]);
     }
@@ -567,7 +646,7 @@ export class Game extends BaseScene {
 
         // Update pause overlay if it exists
         if (this.#pauseOverlay) {
-            const pauseMenuButtonPadding = 10;
+            const pauseMenuButtonPadding = 16;
 
             // Update background
             const background = this.#pauseOverlay.list[0];
@@ -585,8 +664,12 @@ export class Game extends BaseScene {
             const restartButton = this.#pauseOverlay.list[3];
             restartButton.setPosition(width / 2, (height * 0.55) + pauseMenuButtonPadding);
 
+            // Update return to menu button
+            const returnToMenuButton = this.#pauseOverlay.list[4];
+            returnToMenuButton.setPosition(width / 2, (height * 0.65) + (pauseMenuButtonPadding * 2));
+
             // Update version text
-            const versionText = this.#pauseOverlay.list[4];
+            const versionText = this.#pauseOverlay.list[5];
             versionText.setPosition(width / 2, height - 30);
 
             // Center the pause menu
@@ -750,7 +833,9 @@ export class Game extends BaseScene {
 
         if (this.#isPaused) {
             // Stop any active countdown first
-            this.#countdownSystem.stopCountdown();
+            if (this.#countdownSystem) {
+                this.#countdownSystem.stopCountdown();
+            }
 
             // Show pause overlay
             this.#pauseOverlay.visible = true;
@@ -800,6 +885,10 @@ export class Game extends BaseScene {
             this.#dino.toggleButtonVisibility();
 
             // Start countdown before resuming
+            if (!this.#countdownSystem) {
+                return;
+            }
+
             this.#countdownSystem.startCountdown(0, 0, () => {
                 this.physics.resume();
 
@@ -868,17 +957,21 @@ export class Game extends BaseScene {
     }
 
     /**
-     * Toggles debug mode on/off 🐛
+     * Updates our detective mode and all its special tools! 🕵️‍♂️
+     *
+     * @private
+     * @param {boolean} enabled - Whether to turn detective mode on or off
      */
-    #toggleDebugMode() {
-        this.#debugMode = !this.#debugMode;
+    #updateDebugMode(enabled) {
+        // Update our detective mode setting
+        this.#debugMode = enabled;
 
-        // Toggle debug graphics visibility
-        if (this.physics.world.debugGraphic) {
+        // Show or hide our special detective tools! 🕵️‍♂️
+        if (this.physics?.world?.debugGraphic) {
             this.physics.world.debugGraphic.visible = this.#debugMode;
         }
 
-        // Toggle debug text visibility
+        // Show or hide our detective notes! 📝
         if (this.#debugText) {
             this.#debugText.setVisible(this.#debugMode);
             this.#debugText.background.setVisible(this.#debugMode);
@@ -1056,7 +1149,7 @@ export class Game extends BaseScene {
         // Handle debug toggle with key state tracking
         if (this.#debugKey.isDown && !this.#debugKeyPressed) {
             this.#debugKeyPressed = true;
-            this.#toggleDebugMode();
+            this.#updateDebugMode(!this.#debugMode);
         }
         else if (!this.#debugKey.isDown) {
             this.#debugKeyPressed = false;
@@ -1177,8 +1270,8 @@ export class Game extends BaseScene {
         // Stop game physics
         this.physics.pause();
 
-        // Clean up timers
-        this.#cleanup();
+        // Clean up timers and resources
+        this.shutdown();
 
         // Get final scores before resetting
         const finalScore = this.#scoreManager.getCurrentScore();
@@ -1358,7 +1451,7 @@ export class Game extends BaseScene {
      */
     #restartGame() {
         // Clean up any active timers and events
-        this.#cleanup();
+        this.shutdown();
 
         // Clean up existing objects
         if (this.#gameOverText) {
@@ -1378,6 +1471,32 @@ export class Game extends BaseScene {
     }
 
     /**
+     * Returns to the main menu
+     */
+    #returnToMenu() {
+        // Reset physics state before cleanup
+        if (this.#isPaused) {
+            this.physics.resume();
+        }
+        this.physics.world.timeScale = 1;
+
+        // Clean up any active timers and events
+        this.shutdown();
+
+        // Stop all running tweens
+        this.tweens.killAll();
+
+        // Stop all running timers
+        this.time.removeAllEvents();
+
+        // Stop the current scene before starting the menu
+        this.scene.stop();
+
+        // Start the main menu scene
+        this.scene.start('Menu');
+    }
+
+    /**
      * Starts the game with countdown
      */
     #startGameWithCountdown() {
@@ -1385,33 +1504,35 @@ export class Game extends BaseScene {
         this.#dino.play('dino-idle');
 
         // Start countdown at dino's position
-        this.#countdownSystem.startCountdown(0, 0, () => {
-            // Start spawning enemies after a short delay
-            this.time.delayedCall(2000, () => {
-                // Randomly choose which enemy type spawns first
-                const spawnFirst = Math.random() < 0.5 ? 'bird' : 'rock';
+        if (this.#countdownSystem) {
+            this.#countdownSystem.startCountdown(0, 0, () => {
+                // Start spawning enemies after a short delay
+                this.time.delayedCall(2000, () => {
+                    // Randomly choose which enemy type spawns first
+                    const spawnFirst = Math.random() < 0.5 ? 'bird' : 'rock';
 
-                // Randomise initial delays (2-5 seconds for first enemy, 4-7 seconds for second)
-                const firstDelay = Phaser.Math.Between(0, 1000);
-                const secondDelay = Phaser.Math.Between(2000, 4000);
+                    // Randomise initial delays (2-5 seconds for first enemy, 4-7 seconds for second)
+                    const firstDelay = Phaser.Math.Between(0, 1000);
+                    const secondDelay = Phaser.Math.Between(2000, 4000);
 
-                if (spawnFirst === 'bird') {
-                    this.time.delayedCall(firstDelay, () => {
-                        this.#startSpawning('bird', () => this.#spawnBird(), 3000, 8000);
-                    });
-                    this.time.delayedCall(secondDelay, () => {
-                        this.#startSpawning('rock', () => this.#spawnRock(), 1500, 4000);
-                    });
-                }
-                else {
-                    this.time.delayedCall(firstDelay, () => {
-                        this.#startSpawning('rock', () => this.#spawnRock(), 1500, 4000);
-                    });
-                    this.time.delayedCall(secondDelay, () => {
-                        this.#startSpawning('bird', () => this.#spawnBird(), 3000, 8000);
-                    });
-                }
+                    if (spawnFirst === 'bird') {
+                        this.time.delayedCall(firstDelay, () => {
+                            this.#startSpawning('bird', () => this.#spawnBird(), 3000, 8000);
+                        });
+                        this.time.delayedCall(secondDelay, () => {
+                            this.#startSpawning('rock', () => this.#spawnRock(), 1500, 4000);
+                        });
+                    }
+                    else {
+                        this.time.delayedCall(firstDelay, () => {
+                            this.#startSpawning('rock', () => this.#spawnRock(), 1500, 4000);
+                        });
+                        this.time.delayedCall(secondDelay, () => {
+                            this.#startSpawning('bird', () => this.#spawnBird(), 3000, 8000);
+                        });
+                    }
+                });
             });
-        });
+        }
     }
 }

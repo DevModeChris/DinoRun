@@ -8,6 +8,9 @@
  * - ⚠️ Warns us about potential issues
  * - ❌ Lets us know when something goes wrong
  */
+import { SettingsManager } from '../game/systems/settings-manager.js';
+import { GameEvents } from '../game/constants/game-events.js';
+
 export class Logger {
     /** @type {Logger} The single instance of our logger */
     static #instance;
@@ -34,11 +37,12 @@ export class Logger {
             throw new Error('🚫 Oops! There can only be one Logger! Use Logger.getInstance() instead');
         }
 
-        // TODO: Move control of these settings to the in-game developer settings menu
-        this.#debugLogging = false;
-        this.#loggingEnabled = false;
+        // Load settings
+        const settings = SettingsManager.getSettings().developer;
+        this.#debugLogging = settings.debugMode;
+        this.#loggingEnabled = settings.loggingEnabled;
         this.#logLevels = {
-            TRACE: '🔬 TRACE',  // Most detailed level for frequent updates
+            TRACE: '🔬 TRACE',   // Most detailed level for frequent updates
             DEBUG: '🔍 DEBUG',   // Helpful for development
             INFO: '📢 INFO',     // Important game events
             WARN: '⚠️ WARN',     // Potential issues
@@ -46,6 +50,16 @@ export class Logger {
         };
 
         this.#context = {};
+
+        // Subscribe to developer settings changes
+        SettingsManager.subscribe(GameEvents.DEVELOPER_SETTINGS_UPDATED, (settings) => {
+            if ('loggingEnabled' in settings) {
+                this.#loggingEnabled = settings.loggingEnabled;
+            }
+            if ('debugMode' in settings) {
+                this.#debugLogging = settings.debugMode;
+            }
+        });
 
         Logger.#instance = this;
         this.debug('[Logger] Created new logger! 📝');
