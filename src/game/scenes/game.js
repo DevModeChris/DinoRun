@@ -94,6 +94,9 @@ export class Game extends BaseScene {
     /** @type {Phaser.GameObjects.Container} */
     #gameOverOverlay;
 
+    /** @type {Phaser.GameObjects.Particles.ParticleEmitterManager} */
+    #highScoreEmitter;
+
     /** @type {boolean} */
     #isMobile = false;
 
@@ -824,6 +827,9 @@ export class Game extends BaseScene {
             .setOrigin(0, 0)
             .setInteractive(); // Block input
 
+        // Add background to container first (bottom layer)
+        this.#gameOverOverlay.add(background);
+
         // Add Game Over header text
         const gameOverHeader = this.add.text(
             width / 2,
@@ -890,10 +896,13 @@ export class Game extends BaseScene {
                 ease: 'Sine.easeInOut',
             });
 
-            // Create celebration particles
-            const emitter = this.add.particles(0, 0, 'particle', {
+            // Create celebration particles if high score was beaten
+            let emitter;
+
+            // Create celebration particles (second layer, above background but below UI)
+            emitter = this.add.particles(0, 0, 'particle', {
                 x: width / 2,
-                y: scoreText.y + 50, // Position at high score text
+                y: scoreText.y + 50, // Position at high score text location
                 lifespan: 4000,
                 speed: { min: 100, max: 300 },
                 scale: { start: 0.8, end: 0 },
@@ -906,17 +915,17 @@ export class Game extends BaseScene {
                 rotate: { min: 0, max: 360 }, // Particles spin as they move
             });
 
-            // Register the emitter with the main camera
-            this.#cameraManager.registerUIElement(emitter);
+            // Add particles to container (second layer)
+            this.#gameOverOverlay.add(emitter);
+
+            // Store the emitter reference in the scene for cleanup
+            this.#highScoreEmitter = emitter;
 
             // Stop emitting after 20 seconds
             this.time.delayedCall(20000, () => {
-                emitter.stop();
-
-                // Remove the emitter after it's done
-                this.time.delayedCall(1000, () => {
-                    emitter.destroy();
-                });
+                if (this.#highScoreEmitter) {
+                    this.#highScoreEmitter.stop();
+                }
             });
         }
 
@@ -968,9 +977,9 @@ export class Game extends BaseScene {
         restartButton.setPosition(width / 2, buttonY);
         returnToMenuButton.setPosition(width / 2, buttonY + 60);
 
-        // Add all elements to the container
+        // Add all elements to the container in order of layering
+        // (UI elements are added last so they appear on top)
         this.#gameOverOverlay.add([
-            background,
             gameOverHeader,
             scoreText,
             restartButton,
@@ -1499,6 +1508,12 @@ export class Game extends BaseScene {
         // Clean up existing objects
         if (this.#gameOverOverlay) {
             this.#gameOverOverlay.destroy();
+        }
+
+        // Clean up particle emitter if it exists
+        if (this.#highScoreEmitter) {
+            this.#highScoreEmitter.destroy();
+            this.#highScoreEmitter = null;
         }
 
         // Reset game state
