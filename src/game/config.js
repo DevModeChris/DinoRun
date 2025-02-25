@@ -19,7 +19,7 @@ export const gameConfig = {
     title: 'Dino Run',
 
     // The version of our game
-    version: '0.4.4 (250225)',
+    version: '0.4.5 (250225)',
 
     // Hide the Phaser logo
     banner: {

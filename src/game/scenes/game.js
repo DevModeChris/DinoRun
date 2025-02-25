@@ -396,16 +396,18 @@ export class Game extends BaseScene {
             .setOrigin(0, 0)
             .setInteractive(); // Block input when paused
 
-        // Add PAUSED header text
+        // Add Paused header text
         this.#pauseHeader = this.add.text(
             0,
             0,
-            'PAUSED',
+            'Paused',
             {
                 fontFamily: 'grandstander-bold',
                 fontSize: '46px',
                 color: '#ffffff',
                 align: 'center',
+                stroke: '#000000',
+                strokeThickness: 5,
             },
         )
             .setOrigin(0.5);
@@ -1269,9 +1271,6 @@ export class Game extends BaseScene {
 
         // Stop game physics
         this.physics.pause();
-
-        // Clean up timers and resources
-        this.shutdown();
 
         // Get final scores before resetting
         const finalScore = this.#scoreManager.getCurrentScore();

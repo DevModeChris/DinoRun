@@ -104,6 +104,11 @@ export class Menu extends BaseScene {
      * @param {number} height - New game height
      */
     resize(width, height) {
+        // Resize sky system
+        if (this.#skySystem) {
+            this.#skySystem.resize({ width, height });
+        }
+
         // Recheck mobile status
         this.#isMobile = checkIfMobile();
 
@@ -144,8 +149,9 @@ export class Menu extends BaseScene {
             if (this.#versionText) {
                 this.#versionText
                     .setPosition(0, height - 14)
-                    .setFixedWidth(width)
-                    .setAlign('center');  // Ensure text stays centered
+                    .setWordWrapWidth(width, true)
+                    .setAlign('center')  // Ensure text stays centered
+                    .setStyle({ fixedWidth: width });  // Update the background width
             }
         }
     }
@@ -255,6 +261,8 @@ export class Menu extends BaseScene {
             fontFamily: 'grandstander-bold',
             color: '#ffffff',
             align: 'center',
+            stroke: '#000000',
+            strokeThickness: 5,
         }).setOrigin(0.5);
 
         // Create temporary buttons to measure their widths
@@ -332,6 +340,8 @@ export class Menu extends BaseScene {
                 fontSize: this.#isMobile ? '36px' : '48px',
                 fontFamily: 'grandstander-bold',
                 color: '#ffffff',
+                stroke: '#000000',
+                strokeThickness: 5,
             },
         ).setOrigin(0.5);
         this.#settingsContainer.add(titleText);

@@ -398,7 +398,7 @@ export class SkySystem {
         this.#skyGradient.fillRect(
             bounds.x - 5,
             bounds.y,
-            bounds.width,
+            bounds.width + 10,  // Add 10 to compensate for the -5 offset
             bounds.height / 2,
         );
 
@@ -413,7 +413,7 @@ export class SkySystem {
         this.#skyGradient.fillRect(
             bounds.x - 5,
             bounds.y + (bounds.height / 2),
-            bounds.width,
+            bounds.width + 10,  // Add 10 to compensate for the -5 offset
             bounds.height / 2,
         );
     }
