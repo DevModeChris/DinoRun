@@ -3,6 +3,7 @@
  * before the action starts.
  */
 import { GameEvents } from '../constants/game-events.js';
+import { GAME_UI_COLOURS } from '../constants/ui-styles.js';
 
 /**
  * @typedef {import('./event-manager.js').IEventEmitter} IEventEmitter
@@ -58,7 +59,7 @@ export class CountdownSystem {
         this.#countdownText = this.#scene.add.text(0, 0, '5', {
             fontFamily: 'grandstander-bold',
             fontSize: '72px',
-            color: '#ffffff',
+            color: GAME_UI_COLOURS.TEXT,
         });
         this.#countdownText.setOrigin(0.5);
 

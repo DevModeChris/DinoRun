@@ -5,6 +5,11 @@
  * we need to make sure we have everything ready before we start playing!
  */
 import { BaseScene } from './base-scene.js';
+import {
+    RAW_COLOURS,
+    LOADING_COLOURS,
+    hexToPhaser,
+} from '../constants/ui-styles.js';
 
 export class Bootloader extends BaseScene {
     /** @type {Phaser.GameObjects.Rectangle} */
@@ -36,9 +41,9 @@ export class Bootloader extends BaseScene {
 
             // Create a smooth gradient background
             const background = this.add.graphics();
-            const gradientTop = 0x0a0a2a;
-            const gradientMiddle = 0x1a1a4a;
-            const gradientBottom = 0x2e1f5e;
+            const gradientTop = hexToPhaser(LOADING_COLOURS.BACKGROUND_GRADIENT_TOP);
+            const gradientMiddle = hexToPhaser(LOADING_COLOURS.BACKGROUND_GRADIENT_MIDDLE);
+            const gradientBottom = hexToPhaser(LOADING_COLOURS.BACKGROUND_GRADIENT_BOTTOM);
 
             // Create our three-colour gradient by drawing two gradients
             // First gradient: top to middle
@@ -96,7 +101,7 @@ export class Bootloader extends BaseScene {
             const loadingText = this.add.text(baseX + 80, baseY - 50, 'Loading...', {
                 fontSize: '24px',
                 fontFamily: 'grandstander-bold',
-                fill: '#FFFFFF',
+                fill: LOADING_COLOURS.TEXT,
             });
             loadingText.setOrigin(0, 0.5);
 
@@ -108,8 +113,8 @@ export class Bootloader extends BaseScene {
                 barHeight,
             );
             progressBarBg.setOrigin(0, 0.5);
-            progressBarBg.setFillStyle(0x444444, 1);
-            progressBarBg.setStrokeStyle(2, 0x000000);
+            progressBarBg.setFillStyle(hexToPhaser(RAW_COLOURS.DARK_GREY), 1);
+            progressBarBg.setStrokeStyle(2, hexToPhaser(RAW_COLOURS.BLACK));
 
             this.#progressBarBg = progressBarBg;
 
@@ -121,7 +126,7 @@ export class Bootloader extends BaseScene {
                 barHeight,
             );
             progressBar.setOrigin(0, 0.5);
-            progressBar.setFillStyle(0x4ab54a, 1);
+            progressBar.setFillStyle(hexToPhaser(LOADING_COLOURS.PROGRESS_BAR), 1);
 
             this.#progressBar = progressBar;
         };
@@ -134,7 +139,7 @@ export class Bootloader extends BaseScene {
             const ctx = particleCanvas.getContext('2d');
 
             // Draw a simple circle
-            ctx.fillStyle = '#ffffff';
+            ctx.fillStyle = RAW_COLOURS.WHITE;
             ctx.beginPath();
             ctx.arc(4, 4, 3, 0, Math.PI * 2);
             ctx.fill();

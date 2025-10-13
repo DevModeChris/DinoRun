@@ -22,6 +22,13 @@ import { logger } from '../../utils/logger.js';
 import { createEventEmitter } from '../systems/event-manager.js';
 import { GameEvents } from '../constants/game-events.js';
 import {
+    RAW_COLOURS,
+    BUTTON_COLOURS,
+    GAME_UI_COLOURS,
+    MODAL_COLOURS,
+    hexToPhaser,
+} from '../constants/ui-styles.js';
+import {
     gameConfig,
     BASE_WIDTH,
     BASE_HEIGHT,
@@ -310,8 +317,8 @@ export class Game extends BaseScene {
         const scale = isPortrait
             ? Math.max(width / BASE_WIDTH, 0.85)
             : this.#isMobile
-                ? Math.max(height / (BASE_HEIGHT / 2), 0.85)
-                : Math.min(width / BASE_WIDTH, height / BASE_HEIGHT);
+                ? Math.max(height / (BASE_HEIGHT / 2), 0.85)  // Mobile: height-based scale with higher minimum
+                : Math.min(width / BASE_WIDTH, height / BASE_HEIGHT);  // Desktop: smaller ratio to prevent oversizing
 
         // Add all UI elements to the UI camera
         this.#addUIElementsToCamera();
@@ -358,17 +365,17 @@ export class Game extends BaseScene {
             {
                 fontFamily: 'grandstander',
                 fontSize: '26px',
-                color: '#ffffff',
+                color: BUTTON_COLOURS.TEXT,
                 align: 'center',
-                backgroundColor: '#222222',
+                backgroundColor: BUTTON_COLOURS.BACKGROUND,
                 padding: { x: 20, y: 10 },
                 fixedWidth: width,
             },
         )
             .setOrigin(0.5)
             .setInteractive({ useHandCursor: true })
-            .on('pointerover', () => button.setBackgroundColor('#4a4a4a'))
-            .on('pointerout', () => button.setBackgroundColor('#222222'));
+            .on('pointerover', () => button.setBackgroundColor(BUTTON_COLOURS.HOVER_BACKGROUND))
+            .on('pointerout', () => button.setBackgroundColor(BUTTON_COLOURS.BACKGROUND));
 
         return button;
     }
@@ -391,7 +398,7 @@ export class Game extends BaseScene {
             0,
             width,
             height,
-            0x000000,
+            MODAL_COLOURS.BACKGROUND,
             0.5,
         )
             .setOrigin(0, 0)
@@ -405,9 +412,9 @@ export class Game extends BaseScene {
             {
                 fontFamily: 'grandstander-bold',
                 fontSize: '46px',
-                color: '#ffffff',
+                color: GAME_UI_COLOURS.TEXT,
                 align: 'center',
-                stroke: '#000000',
+                stroke: GAME_UI_COLOURS.TEXT_STROKE,
                 strokeThickness: 5,
             },
         )
@@ -482,7 +489,7 @@ export class Game extends BaseScene {
             {
                 fontFamily: 'grandstander-thin',
                 fontSize: '20px',
-                color: '#ffffff',
+                color: GAME_UI_COLOURS.TEXT,
             },
         ).setOrigin(0.5);
 
@@ -742,7 +749,7 @@ export class Game extends BaseScene {
         this.#debugText = this.add.text(16, 86, '', {
             fontFamily: 'monospace',
             fontSize: '13px',
-            fill: '#ffffff',
+            fill: GAME_UI_COLOURS.TEXT,
             padding: { x: padding, y: padding },
             resolution: 3,        // Increased resolution for sharper text
             antialias: false,     // Disable antialiasing for crisp pixels
@@ -757,7 +764,7 @@ export class Game extends BaseScene {
             86 - padding - buffer,
             0, // Initial width will be set dynamically
             0, // Initial height will be set dynamically
-            0x000000,
+            MODAL_COLOURS.BACKGROUND,
             0.4,
         )
             .setOrigin(0, 0)
@@ -821,7 +828,7 @@ export class Game extends BaseScene {
             0,
             width,
             height,
-            0x000000,
+            MODAL_COLOURS.BACKGROUND,
             0.5,
         )
             .setOrigin(0, 0)
@@ -838,9 +845,9 @@ export class Game extends BaseScene {
             {
                 fontFamily: 'grandstander-bold',
                 fontSize: '52px',
-                color: '#ffffff',
+                color: GAME_UI_COLOURS.TEXT,
                 align: 'center',
-                stroke: '#000000',
+                stroke: GAME_UI_COLOURS.TEXT_STROKE,
                 strokeThickness: 5,
             },
         ).setOrigin(0.5);
@@ -853,9 +860,9 @@ export class Game extends BaseScene {
             {
                 fontFamily: 'grandstander',
                 fontSize: '32px',
-                color: '#ffffff',
+                color: GAME_UI_COLOURS.SCORE_TEXT,
                 align: 'center',
-                stroke: '#000000',
+                stroke: GAME_UI_COLOURS.TEXT_STROKE,
                 strokeThickness: 3,
             },
         ).setOrigin(0.5);
@@ -870,14 +877,14 @@ export class Game extends BaseScene {
                 {
                     fontFamily: 'grandstander',
                     fontSize: '40px',
-                    fill: '#FFD700',
+                    fill: GAME_UI_COLOURS.COUNTDOWN_TEXT,
                     align: 'center',
-                    stroke: '#AD9203',
+                    stroke: GAME_UI_COLOURS.COUNTDOWN_TEXT_STROKE,
                     strokeThickness: 3,
                     shadow: {
                         offsetX: 0,
                         offsetY: 0,
-                        color: '#FFD70080',
+                        color: GAME_UI_COLOURS.COUNTDOWN_TEXT_SHADOW,
                         blur: 6,
                         stroke: true,
                         fill: true,
@@ -910,7 +917,12 @@ export class Game extends BaseScene {
                 quantity: 4,
                 frequency: 50,
                 blendMode: 'ADD',
-                tint: [0xffff00, 0xff00ff, 0x00ffff, 0xff0000],
+                tint: [
+                    hexToPhaser(RAW_COLOURS.BRIGHT_YELLOW),
+                    hexToPhaser(RAW_COLOURS.BRIGHT_PINK),
+                    hexToPhaser(RAW_COLOURS.BRIGHT_GREEN),
+                    hexToPhaser(RAW_COLOURS.BRIGHT_RED),
+                ],
                 angle: { min: 0, max: 360 }, // Emit in all directions
                 rotate: { min: 0, max: 360 }, // Particles spin as they move
             });
@@ -1546,11 +1558,77 @@ export class Game extends BaseScene {
         // Stop all running timers
         this.time.removeAllEvents();
 
+        // Explicitly destroy game objects that might not be handled by shutdown
+        if (this.#dino) {
+            this.#dino.destroy();
+            this.#dino = null;
+        }
+
+        if (this.#ground) {
+            this.#ground.destroy();
+            this.#ground = null;
+        }
+
+        if (this.#platform) {
+            this.#platform.destroy();
+            this.#platform = null;
+        }
+
+        // Destroy all enemies
+        if (this.#enemies) {
+            this.#enemies.clear(true, true); // destroy=true, removeFromScene=true
+            this.#enemies = null;
+        }
+
+        // Clean up camera manager
+        if (this.#cameraManager) {
+            this.#cameraManager.destroy();
+            this.#cameraManager = null;
+        }
+
+        // Clean up sound manager
+        if (this.#soundManager) {
+            this.#soundManager.stopAll();
+            this.#soundManager = null;
+        }
+
+        // Clean up score manager
+        if (this.#scoreManager) {
+            this.#scoreManager.destroy();
+            this.#scoreManager = null;
+        }
+
+        // Clean up UI elements
+        if (this.#pauseOverlay) {
+            this.#pauseOverlay.destroy();
+            this.#pauseOverlay = null;
+        }
+
+        if (this.#gameOverOverlay) {
+            this.#gameOverOverlay.destroy();
+            this.#gameOverOverlay = null;
+        }
+
+        // Clean up any remaining textures from memory
+        this.textures.removeAll();
+
+        // Clear any input listeners
+        this.input.keyboard.clearCaptures();
+        this.input.keyboard.removeAllKeys();
+
+        // Force a garbage collection hint (not guaranteed, but helpful)
+        if (window.gc) {
+            window.gc();
+        }
+
         // Stop the current scene before starting the menu
         this.scene.stop();
 
         // Start the main menu scene
         this.scene.start('Menu');
+        
+        // Log memory cleanup for debugging purposes
+        logger.debug('Game scene memory cleanup complete');
     }
 
     /**

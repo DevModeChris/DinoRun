@@ -3,6 +3,8 @@
  *
  * It keeps track of how well you're doing and remembers your best score ever!
  */
+import { GAME_UI_COLOURS } from '../constants/ui-styles.js';
+
 export class ScoreManager {
     /** @type {number} */
     #currentScore = 0;
@@ -22,6 +24,9 @@ export class ScoreManager {
     /** @type {number} */
     #baseFontSize;
 
+    /** @type {Phaser.Scene} */
+    #scene;
+
     /**
      * Creates our scoreboard!
      *
@@ -31,13 +36,14 @@ export class ScoreManager {
      * @param {number} [fontSize=24] - Size of the score text
      */
     constructor(scene, x, y, fontSize = 24) {
+        this.#scene = scene;
         this.#baseFontSize = fontSize;
         this.#loadHighScore();
 
         const textConfig = {
             fontSize: `${fontSize}px`,
             fontFamily: 'grandstander-thin',
-            fill: '#FFFFFF',
+            fill: GAME_UI_COLOURS.TEXT,
             align: 'right',
         };
 
@@ -125,13 +131,34 @@ export class ScoreManager {
     }
 
     /**
-     * Resets your current score back to zero
+     * Resets the current score to zero
      */
     reset() {
         this.#currentScore = 0;
         this.#accumulatedTime = 0;
         this.#currentScoreText.setText('Score: 0m');
         this.#updateScorePosition();
+    }
+
+    /**
+     * Destroys all resources used by the ScoreManager
+     */
+    destroy() {
+        // Destroy text objects
+        if (this.#currentScoreText) {
+            this.#currentScoreText.destroy();
+            this.#currentScoreText = null;
+        }
+
+        if (this.#highScoreText) {
+            this.#highScoreText.destroy();
+            this.#highScoreText = null;
+        }
+
+        // Clear any timers or events if they exist
+        if (this.#scene) {
+            this.#scene = null;
+        }
     }
 
     /**
@@ -162,7 +189,7 @@ export class ScoreManager {
         const textConfig = {
             fontSize: `${size}px`,
             fontFamily: 'grandstander-thin',
-            fill: '#FFFFFF',
+            fill: GAME_UI_COLOURS.TEXT,
             align: 'right',
         };
 

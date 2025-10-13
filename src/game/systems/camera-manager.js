@@ -362,4 +362,39 @@ export class CameraManager {
         this.#mainCamera.resetFX();
         this.#uiCamera.resetFX();
     }
+
+    /**
+     * Destroys all resources used by the CameraManager
+     */
+    destroy() {
+        // Remove all event listeners
+        if (this.#events) {
+            this.#events.off(GameEvents.DINO_LAND);
+            this.#events.off(GameEvents.DINO_DUCK_START);
+            this.#events.off(GameEvents.DINO_DUCK_END);
+            this.#events.off(GameEvents.GAME_OVER);
+            this.#events.off(GameEvents.SLOW_MOTION_START);
+            this.#events.off(GameEvents.SLOW_MOTION_END);
+            this.#events = null;
+        }
+
+        // Clear element collections
+        this.#gameElements.clear();
+        this.#uiElements.clear();
+
+        // Stop any active camera effects
+        if (this.#scene && this.#scene.cameras) {
+            const allCameras = this.#scene.cameras.cameras || [];
+
+            for (const camera of allCameras) {
+                camera.resetFX();
+            }
+        }
+
+        // Clear scene reference
+        this.#scene = null;
+        this.#uiCamera = null;
+
+        logger.debug('Camera manager destroyed');
+    }
 }
