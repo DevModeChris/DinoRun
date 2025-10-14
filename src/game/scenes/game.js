@@ -1626,7 +1626,7 @@ export class Game extends BaseScene {
 
         // Start the main menu scene
         this.scene.start('Menu');
-        
+
         // Log memory cleanup for debugging purposes
         logger.debug('Game scene memory cleanup complete');
     }
