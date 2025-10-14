@@ -3,7 +3,7 @@
     "name": "DinoRun",
     "short_name": "DinoRun",
     "description": "A fun endless runner game featuring a dinosaur",
-    "start_url": "/",
+    "start_url": "/DinoRun/",
     "display": "standalone",
     "background_color": "#13212e",
     "theme_color": "#13212e",
