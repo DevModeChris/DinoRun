@@ -567,9 +567,15 @@ export class Game extends BaseScene {
             this.#ground.setScale(scale);
             this.#ground.y = groundY;
 
-            // Make ground wider than camera bounds to prevent edges showing
-            this.#ground.width = width + (padding.x * 4); // Extra wide to account for scrolling
-            this.#ground.x = -padding.x * 2; // Center the extra width
+            // Camera bounds: x=0 to x=(width + padding.x * 2)
+            // Ground origin is at (0, 1) which means x position is the LEFT edge
+            // We need the ground to cover the entire camera bounds width plus extra for scrolling
+            const cameraBoundsWidth = width + (padding.x * 2);
+            const scrollBuffer = width * 0.5; // Extra 50% width for scrolling buffer
+            this.#ground.width = cameraBoundsWidth + scrollBuffer;
+
+            // Position ground at x=0 (left edge of camera bounds)
+            this.#ground.x = 0;
         }
 
         // Update platform - extend width to cover padded area
@@ -1608,9 +1614,6 @@ export class Game extends BaseScene {
             this.#gameOverOverlay.destroy();
             this.#gameOverOverlay = null;
         }
-
-        // Clean up any remaining textures from memory
-        this.textures.removeAll();
 
         // Clear any input listeners
         this.input.keyboard.clearCaptures();
