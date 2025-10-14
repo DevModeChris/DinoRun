@@ -117,12 +117,76 @@ export class Bird extends Phaser.GameObjects.Sprite {
     }
 
     /**
-     * Checks if the bird has flown off screen and destroys it if so
+     * Checks if the bird has flown off screen and returns it to the pool if so
      */
     #checkIfOffScreen() {
         if (this.x < -Bird.WIDTH) {
-            this.destroy();
+            this.returnToPool();
         }
+    }
+
+    /**
+     * Spawns/resets this bird instance at a random height
+     * This is used for object pooling! ♻️
+     *
+     * @param {number} gameSpeed - The current game speed
+     */
+    spawn(gameSpeed) {
+        const gameWidth = this.scene.scale.width;
+        const groundY = this.scene.scale.height - 30; // Ground level
+        const heightAboveGround = Phaser.Math.RND.pick(Bird.SPAWN_HEIGHTS);
+        const spawnY = groundY - heightAboveGround;
+
+        // Reset position
+        this.setPosition(gameWidth + Bird.WIDTH, spawnY);
+
+        // Reset game speed
+        this.#currentGameSpeed = gameSpeed;
+
+        // Recalculate speed multiplier
+        const baseMultiplier = Phaser.Math.FloatBetween(Bird.BASE_SPEED_RANGE.min, Bird.BASE_SPEED_RANGE.max);
+        const extraBoost = (gameSpeed - 280) / 500;
+        this.#speedMultiplier = baseMultiplier + extraBoost;
+
+        // Reset physics
+        if (this.body) {
+            this.body.setVelocityX(-this.#currentGameSpeed * this.#speedMultiplier);
+        }
+
+        // Make visible and active
+        this.setActive(true);
+        this.setVisible(true);
+
+        // Restart animation
+        this.play('bird-fly');
+
+        // Restart off-screen check timer if it was stopped
+        if (this.checkDestroy && !this.checkDestroy.paused) {
+            this.checkDestroy.paused = false;
+        }
+    }
+
+    /**
+     * Returns this bird to the pool for reuse
+     * Like putting a toy back in the toy box! 🧸
+     */
+    returnToPool() {
+        // Stop animation
+        this.anims.stop();
+
+        // Stop physics
+        if (this.body) {
+            this.body.setVelocityX(0);
+        }
+
+        // Pause the off-screen check timer
+        if (this.checkDestroy) {
+            this.checkDestroy.paused = true;
+        }
+
+        // Hide and deactivate
+        this.setActive(false);
+        this.setVisible(false);
     }
 
     /**
@@ -143,6 +207,7 @@ export class Bird extends Phaser.GameObjects.Sprite {
 
     /**
      * Creates a new bird at a random height above the ground
+     * @deprecated Use spawn() instance method with object pooling instead
      *
      * @param {Phaser.Scene} scene - The scene to spawn the bird in
      * @param {number} gameSpeed - The current game speed
@@ -161,10 +226,17 @@ export class Bird extends Phaser.GameObjects.Sprite {
      * Overrides the default destroy method to also remove the update event listener
      */
     destroy(...args) {
+        // Clean up timer
+        if (this.checkDestroy) {
+            this.checkDestroy.destroy();
+            this.checkDestroy = null;
+        }
+
         // Remove the update event listener if scene exists, to avoid memory leaks
         if (this.scene && this.scene.events) {
             this.scene.events.off('update', this.update, this);
         }
+
         super.destroy(...args);
     }
 }

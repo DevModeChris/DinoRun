@@ -74,22 +74,16 @@ export class Dino extends Phaser.GameObjects.Sprite {
     #duckButton;
 
     /** @type {boolean} */
-    #keyJumpPressed = false;
-
-    /** @type {boolean} */
-    #touchJumpPressed = false;
-
-    /** @type {boolean} */
     #justDoubleJumped = false;
+
+    /** @type {boolean} */
+    #jumpWasPressed = false;
 
     /** @type {CameraManager} */
     #cameraManager;
 
     /** @type {InputLogger} */
     #inputLogger;
-
-    /** @type {IEventEmitter} */
-    #events;
 
     /** @type {SoundManager} */
     #soundManager;
@@ -100,13 +94,10 @@ export class Dino extends Phaser.GameObjects.Sprite {
      * @param {Phaser.Scene} scene - The scene that owns this dino
      * @param {number} x - The dino's starting x position
      * @param {number} y - The dino's starting y position
-     * @param {IEventEmitter} events - The event emitter to use
+     * @param {IEventEmitter} _events - The event emitter (unused, kept for API compatibility)
      */
-    constructor(scene, x, y, events) {
+    constructor(scene, x, y, _events) {
         super(scene, x, y, 'dino-sprites', 'idle-1');
-
-        // Store event emitter
-        this.#events = events;
 
         // Get camera manager reference
         this.#cameraManager = scene.getCameraManager();
@@ -178,22 +169,20 @@ export class Dino extends Phaser.GameObjects.Sprite {
 
         // Update input states
         const jumpPressed = (this.#keys.UP.isDown || this.#keys.SPACE.isDown) // Keyboard
-                          || this.#activeJumpPointers.size > 0; // Mobile
-        const jumpPressedState = this.#isMobile ? '#touchJumpPressed' : '#keyJumpPressed';
+            || this.#activeJumpPointers.size > 0; // Mobile
 
         const duckPressed = (this.#keys.DOWN.isDown || this.#keys.CTRL.isDown) // Keyboard
-                          || this.#activeDuckPointers.size > 0; // Mobile
+            || this.#activeDuckPointers.size > 0; // Mobile
 
-        // Handle jump
+        // Handle jump (with edge detection to prevent holding jump)
         if (jumpPressed && !this.#isDucking && this.#remainingJumps > 0) {
-            if (!this[jumpPressedState]) {
-                this[jumpPressedState] = true;
-
+            if (!this.#jumpWasPressed) {
+                this.#jumpWasPressed = true;
                 this.jump();
             }
         }
         else {
-            this[jumpPressedState] = false;
+            this.#jumpWasPressed = false;
         }
 
         // Handle duck

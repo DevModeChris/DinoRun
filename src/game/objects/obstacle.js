@@ -97,6 +97,15 @@ export class Obstacle extends Phaser.GameObjects.Sprite {
     }
 
     /**
+     * Sets the scroll speed for this obstacle
+     *
+     * @param {number} speed - The new scroll speed
+     */
+    setScrollSpeed(speed) {
+        this.#scrollSpeed = speed;
+    }
+
+    /**
      * Updates the obstacle position each frame to move with the ground
      * Like it's glued to our scrolling ground! 🏃‍♂️
      *

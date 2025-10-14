@@ -13,9 +13,6 @@ export class SkySystem {
     /** @type {number} */
     #timeOfDay;
 
-    /** @type {number} */
-    #lastUpdateTime;
-
     /** @type {Phaser.GameObjects.Graphics} */
     #skyGradient;
 
@@ -254,7 +251,6 @@ export class SkySystem {
     constructor(scene) {
         this.#scene = scene;
         this.#timeOfDay = Math.random(); // Start at a random time of day
-        this.#lastUpdateTime = 0;
 
         // Get initial scene dimensions
         this.#initialSceneWidth = this.#scene.scale.width || window.innerWidth;
@@ -786,7 +782,7 @@ export class SkySystem {
             for (let layer = 0; layer < SkySystem.AURORA_CONFIG.GLOW_LAYERS; layer++) {
                 const layerAlpha = baseAlpha * (1 - (layer * 0.12));
                 const thickness = SkySystem.AURORA_CONFIG.BASE_THICKNESS +
-                                (layer * SkySystem.AURORA_CONFIG.THICKNESS_STEP);
+                    (layer * SkySystem.AURORA_CONFIG.THICKNESS_STEP);
 
                 this.#auroraGraphics.beginPath();
                 this.#auroraGraphics.lineStyle(thickness, colour, layerAlpha);
@@ -799,8 +795,8 @@ export class SkySystem {
                     const normalisedTime = time * 0.001 * wave.speed;
                     const secondaryWave = Math.sin((x / (wave.wavelength * 0.4)) + (normalisedTime * 1.5)) * (amplitude * 0.3);
                     const y = wave.y +
-                            (Math.sin((x / wave.wavelength) + normalisedTime) * amplitude) +
-                            secondaryWave;
+                        (Math.sin((x / wave.wavelength) + normalisedTime) * amplitude) +
+                        secondaryWave;
 
                     if (isFirst) {
                         this.#auroraGraphics.moveTo(x, y);
@@ -1054,16 +1050,26 @@ export class SkySystem {
         this.#rainEmitter = this.#scene.add.particles(0, 0, 'particle', {
             x: { min: 0, max: this.#scene.scale.width },
             y: 0,
-            lifespan: { min: SkySystem.WEATHER_CONFIG.RAIN.LIFETIME.MIN,
-                max: SkySystem.WEATHER_CONFIG.RAIN.LIFETIME.MAX },
-            speed: { min: SkySystem.WEATHER_CONFIG.RAIN.SPEED.MIN,
-                max: SkySystem.WEATHER_CONFIG.RAIN.SPEED.MAX },
-            angle: { min: SkySystem.WEATHER_CONFIG.RAIN.ANGLE.MIN,
-                max: SkySystem.WEATHER_CONFIG.RAIN.ANGLE.MAX },
-            scale: { start: SkySystem.WEATHER_CONFIG.RAIN.SCALE.MIN,
-                end: SkySystem.WEATHER_CONFIG.RAIN.SCALE.MAX },
-            alpha: { start: SkySystem.WEATHER_CONFIG.RAIN.ALPHA.MIN,
-                end: SkySystem.WEATHER_CONFIG.RAIN.ALPHA.MAX },
+            lifespan: {
+                min: SkySystem.WEATHER_CONFIG.RAIN.LIFETIME.MIN,
+                max: SkySystem.WEATHER_CONFIG.RAIN.LIFETIME.MAX,
+            },
+            speed: {
+                min: SkySystem.WEATHER_CONFIG.RAIN.SPEED.MIN,
+                max: SkySystem.WEATHER_CONFIG.RAIN.SPEED.MAX,
+            },
+            angle: {
+                min: SkySystem.WEATHER_CONFIG.RAIN.ANGLE.MIN,
+                max: SkySystem.WEATHER_CONFIG.RAIN.ANGLE.MAX,
+            },
+            scale: {
+                start: SkySystem.WEATHER_CONFIG.RAIN.SCALE.MIN,
+                end: SkySystem.WEATHER_CONFIG.RAIN.SCALE.MAX,
+            },
+            alpha: {
+                start: SkySystem.WEATHER_CONFIG.RAIN.ALPHA.MIN,
+                end: SkySystem.WEATHER_CONFIG.RAIN.ALPHA.MAX,
+            },
             tint: SkySystem.WEATHER_CONFIG.RAIN.COLOUR,
             frequency: SkySystem.WEATHER_CONFIG.RAIN.FREQUENCY,
             quantity: SkySystem.WEATHER_CONFIG.RAIN.QUANTITY,
@@ -1074,17 +1080,27 @@ export class SkySystem {
         // Create dust emitter
         this.#dustEmitter = this.#scene.add.particles(-50, 0, 'particle', {
             y: { min: 0, max: this.#scene.scale.height * 0.7 },
-            lifespan: { min: SkySystem.WEATHER_CONFIG.DUST.LIFETIME.MIN,
-                max: SkySystem.WEATHER_CONFIG.DUST.LIFETIME.MAX },
-            speedX: { min: SkySystem.WEATHER_CONFIG.DUST.SPEED.MIN,
-                max: SkySystem.WEATHER_CONFIG.DUST.SPEED.MAX },
+            lifespan: {
+                min: SkySystem.WEATHER_CONFIG.DUST.LIFETIME.MIN,
+                max: SkySystem.WEATHER_CONFIG.DUST.LIFETIME.MAX,
+            },
+            speedX: {
+                min: SkySystem.WEATHER_CONFIG.DUST.SPEED.MIN,
+                max: SkySystem.WEATHER_CONFIG.DUST.SPEED.MAX,
+            },
             speedY: { min: -20, max: 20 },
-            angle: { min: SkySystem.WEATHER_CONFIG.DUST.ANGLE.MIN,
-                max: SkySystem.WEATHER_CONFIG.DUST.ANGLE.MAX },
-            scale: { start: SkySystem.WEATHER_CONFIG.DUST.SCALE.MIN,
-                end: SkySystem.WEATHER_CONFIG.DUST.SCALE.MAX },
-            alpha: { start: SkySystem.WEATHER_CONFIG.DUST.ALPHA.MIN,
-                end: SkySystem.WEATHER_CONFIG.DUST.ALPHA.MAX },
+            angle: {
+                min: SkySystem.WEATHER_CONFIG.DUST.ANGLE.MIN,
+                max: SkySystem.WEATHER_CONFIG.DUST.ANGLE.MAX,
+            },
+            scale: {
+                start: SkySystem.WEATHER_CONFIG.DUST.SCALE.MIN,
+                end: SkySystem.WEATHER_CONFIG.DUST.SCALE.MAX,
+            },
+            alpha: {
+                start: SkySystem.WEATHER_CONFIG.DUST.ALPHA.MIN,
+                end: SkySystem.WEATHER_CONFIG.DUST.ALPHA.MAX,
+            },
             tint: SkySystem.WEATHER_CONFIG.DUST.COLOUR,
             frequency: SkySystem.WEATHER_CONFIG.DUST.FREQUENCY,
             quantity: SkySystem.WEATHER_CONFIG.DUST.QUANTITY,

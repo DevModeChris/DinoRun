@@ -4,12 +4,6 @@
 import { logger } from './logger.js';
 
 export class InputLogger {
-    /** @type {Phaser.Scene} The scene this input logger belongs to */
-    #scene;
-
-    /** @type {string} Name of the game object being tracked */
-    #objectName;
-
     /**
      * 🎮 Creates a new input logger
      *
@@ -17,9 +11,6 @@ export class InputLogger {
      * @param {string} objectName - Name of the game object being tracked
      */
     constructor(scene, objectName) {
-        this.#scene = scene;
-        this.#objectName = objectName;
-
         // Set up context for all input logs
         logger.setContext({
             scene: scene.scene.key,

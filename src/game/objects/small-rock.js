@@ -108,16 +108,80 @@ export class SmallRock extends Obstacle {
     }
 
     /**
+     * Spawns/resets this rock instance at a new position
+     * This is used for object pooling! ♻️
+     *
+     * @param {number} x - The x position to spawn at
+     * @param {number} y - The y position to spawn at
+     * @param {number} scrollSpeed - The scroll speed
+     */
+    spawn(x, y, scrollSpeed) {
+        // Pick a new random rock variant
+        const frameKey = SmallRock.VARIANTS[Math.floor(Math.random() * SmallRock.VARIANTS.length)];
+        this.setFrame(frameKey);
+
+        // Update scroll speed using parent class setter
+        this.setScrollSpeed(scrollSpeed);
+
+        // Reset position
+        this.setPosition(x, y);
+        this.#initialX = x;
+        this.#initialGroundTileX = this.scene.getGround().tilePositionX;
+
+        // Match the ground's scale
+        const ground = this.scene.getGround();
+        if (ground) {
+            this.setScale(ground.scaleX, ground.scaleY);
+        }
+
+        // Update collision box for the new frame
+        const frame = this.scene.textures.getFrame('obstacle-small-rocks-sprites', frameKey);
+        if (frame && this.body) {
+            const width = frame.width * SmallRock.COLLISION_SCALE * this.scaleX;
+            const height = frame.height * SmallRock.COLLISION_SCALE * this.scaleY;
+            this.body.setSize(width, height);
+
+            const yOffset = -this.displayHeight * 0.6;
+            this.body.setOffset(
+                (this.displayWidth - width) / 2,
+                yOffset,
+            );
+        }
+
+        // Make visible and active
+        this.setActive(true);
+        this.setVisible(true);
+
+        // Update initial position
+        this.updatePosition();
+    }
+
+    /**
+     * Returns this rock to the pool for reuse
+     * Like putting a toy back in the toy box! 🧸
+     */
+    returnToPool() {
+        // Hide and deactivate
+        this.setActive(false);
+        this.setVisible(false);
+    }
+
+    /**
      * Updates the rock's position to move with the ground
      *
      * @param {number} _delta - Time since last update in milliseconds
      */
     update(_delta) {
+        // Skip update if not active
+        if (!this.active) {
+            return;
+        }
+
         this.updatePosition();
 
-        // Destroy if off screen
+        // Return to pool if off screen
         if (this.x < -this.width) {
-            this.destroy();
+            this.returnToPool();
         }
     }
 }

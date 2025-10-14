@@ -93,9 +93,6 @@ export class Game extends BaseScene {
     #dinoX = 100;
 
     /** @type {number} */
-    #groundY = 0;
-
-    /** @type {number} */
     #groundCollisionHeight = Ground.COLLISION_HEIGHT;
 
     /** @type {Phaser.GameObjects.Container} */
@@ -273,10 +270,12 @@ export class Game extends BaseScene {
         // Create difficulty manager
         this.#difficultyManager = new DifficultyManager(this);
 
-        // Create enemy group with physics
+        // Create enemy group with object pooling enabled
+        // This reuses enemies instead of creating new ones each time! ♻️
         this.#enemies = this.add.group({
             classType: Phaser.GameObjects.Sprite,
             runChildUpdate: true,
+            maxSize: 20, // Maximum number of enemies in the pool
         });
 
         // Initialise score display
@@ -549,17 +548,14 @@ export class Game extends BaseScene {
         // Get camera padding if available
         const padding = this.#cameraManager?.cameraPadding || { x: 0, y: 0 };
 
-        // Calculate ground dimensions first - these are our reference points
-        const groundHeight = Math.ceil(Ground.HEIGHT * scale);
+        // Calculate ground collision height - this is our reference point
         const groundCollisionHeight = Math.ceil(Ground.COLLISION_HEIGHT * scale);
 
         // Calculate ground positions from bottom of screen
         const groundY = height;
-        const groundTopY = groundY - groundHeight;
         const groundCollisionY = groundY - groundCollisionHeight;
 
-        // Cache these values for other calculations
-        this.#groundY = groundTopY;
+        // Cache ground collision height for other calculations
         this.#groundCollisionHeight = groundCollisionHeight;
 
         // Update ground - extend width to cover padded area
@@ -816,10 +812,10 @@ export class Game extends BaseScene {
      * Creates the game over overlay
      *
      * @param {number} finalScore - The final score achieved
-     * @param {number} highScore - The current high score
+     * @param {number} _highScore - The current high score (unused, kept for API compatibility)
      * @param {boolean} beatHighScore - Whether the high score was beaten
      */
-    #createGameOverOverlay(finalScore, highScore, beatHighScore) {
+    #createGameOverOverlay(finalScore, _highScore, beatHighScore) {
         const { width, height } = this.scale;
 
         // Create a semi-transparent black overlay
@@ -1259,7 +1255,7 @@ export class Game extends BaseScene {
     }
 
     /**
-     * Spawns a bird at the current difficulty level
+     * Spawns a bird at the current difficulty level using object pooling
      *
      * @returns {Bird} The spawned bird
      */
@@ -1271,18 +1267,26 @@ export class Game extends BaseScene {
         // Get current game speed
         const gameSpeed = this.#difficultyManager.getCurrentSpeed();
 
-        // Create a new bird and add it to the enemy group
-        const bird = Bird.spawn(this, gameSpeed);
+        // Try to get an inactive bird from the pool
+        let bird = this.#enemies.getChildren().find((enemy) => {
+            return enemy instanceof Bird && !enemy.active;
+        });
 
-        // Register with camera manager before adding to group
-        this.#cameraManager.registerGameElement(bird);
-        this.#enemies.add(bird);
+        // If no inactive bird found, create a new one
+        if (!bird) {
+            bird = new Bird(this, 0, 0, gameSpeed);
+            this.#enemies.add(bird);
+            this.#cameraManager.registerGameElement(bird);
+        }
+
+        // Spawn/reset the bird
+        bird.spawn(gameSpeed);
 
         return bird;
     }
 
     /**
-     * Spawns a rock at the current difficulty level
+     * Spawns a rock at the current difficulty level using object pooling
      *
      * @returns {SmallRock} The spawned rock
      */
@@ -1291,16 +1295,25 @@ export class Game extends BaseScene {
             return null;
         }
 
-        // Spawn rock offscreen to the right
-        const rock = new SmallRock(
-            this,
-            this.scale.width + 100, // Start off-screen to the right
-            this.scale.height - this.#groundCollisionHeight,
-            this.#difficultyManager.getCurrentSpeed(), // Pass current speed for reference
-        );
+        const spawnX = this.scale.width + 100; // Start off-screen to the right
+        const spawnY = this.scale.height - this.#groundCollisionHeight;
+        const scrollSpeed = this.#difficultyManager.getCurrentSpeed();
 
-        // Register with camera manager before adding to group
-        this.#cameraManager.registerGameElement(rock);
+        // Try to get an inactive rock from the pool
+        let rock = this.#enemies.getChildren().find((enemy) => {
+            return enemy instanceof SmallRock && !enemy.active;
+        });
+
+        // If no inactive rock found, create a new one
+        if (!rock) {
+            rock = new SmallRock(this, spawnX, spawnY, scrollSpeed);
+            this.#enemies.add(rock);
+            this.#cameraManager.registerGameElement(rock);
+        }
+        else {
+            // Spawn/reset the rock
+            rock.spawn(spawnX, spawnY, scrollSpeed);
+        }
 
         return rock;
     }

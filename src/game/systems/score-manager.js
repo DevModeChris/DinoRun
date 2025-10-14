@@ -1,5 +1,5 @@
 /**
- * The ScoreManager manages and shows your points in the game!
+ * 🏆 The ScoreManager manages and shows your points in the game!
  *
  * It keeps track of how well you're doing and remembers your best score ever!
  */

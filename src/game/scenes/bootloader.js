@@ -21,9 +21,6 @@ export class Bootloader extends BaseScene {
     /** @type {Phaser.GameObjects.Sprite} */
     #loadingDino;
 
-    /** @type {boolean} */
-    #isFirstPhaseComplete = false;
-
     // Declare private methods in class scope
     #createLoadingUI;
     #loadFonts;
@@ -247,7 +244,6 @@ export class Bootloader extends BaseScene {
 
         // When first phase assets are loaded, create UI and start second phase
         this.load.once('complete', () => {
-            this.#isFirstPhaseComplete = true;
             this.#createLoadingUI();
             this.#startSecondPhase();
         });
