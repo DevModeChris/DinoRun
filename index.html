@@ -1,19 +1,35 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <!-- These are like instructions for the browser to read our game correctly -->
     <meta charset="UTF-8">
-    <meta name="viewport" content="viewport-fit=cover, width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui=1">
+    <meta name="viewport"
+        content="viewport-fit=cover, width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, minimal-ui=1">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="theme-color" content="#fafafa">
+    <meta name="theme-color" content="#13212e">
     <meta name="format-detection" content="telephone=no">
-    <title>Dino Run</title>
+    <title>DinoRun</title>
+
+    <!-- Favicon for browsers -->
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
+
+    <!-- Mobile app icons -->
+    <link rel="apple-touch-icon" sizes="192x192" href="src/assets/icons/icon-192-c.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="src/assets/icons/icon-192-c.png">
+    <link rel="icon" type="image/png" sizes="512x512" href="src/assets/icons/icon-512-c.png">
+
+    <!-- Web App Manifest -->
+    <link rel="manifest" href="manifest.json">
+
     <link rel="stylesheet" href="src/styles.css">
 </head>
+
 <body>
     <div id="game"></div>
     <script type="module" src="src/main.js"></script>
 </body>
+
 </html>
