@@ -37,6 +37,9 @@ export class Dino extends Phaser.GameObjects.Sprite {
     /** @type {number} */
     static MAX_JUMPS = 2;
 
+    /** @type {number} - Horizontal movement speed */
+    static MOVE_SPEED = 300;
+
     /** @type {number} */
     #jumpForce = 600;
 
@@ -67,11 +70,23 @@ export class Dino extends Phaser.GameObjects.Sprite {
     /** @type {Set<number>} */
     #activeDuckPointers = new Set();
 
+    /** @type {Set<number>} */
+    #activeLeftPointers = new Set();
+
+    /** @type {Set<number>} */
+    #activeRightPointers = new Set();
+
     /** @type {Phaser.GameObjects.Sprite} */
     #jumpButton;
 
     /** @type {Phaser.GameObjects.Sprite} */
     #duckButton;
+
+    /** @type {Phaser.GameObjects.Sprite} */
+    #leftButton;
+
+    /** @type {Phaser.GameObjects.Sprite} */
+    #rightButton;
 
     /** @type {boolean} */
     #justDoubleJumped = false;
@@ -173,6 +188,23 @@ export class Dino extends Phaser.GameObjects.Sprite {
 
         const duckPressed = (this.#keys.DOWN.isDown || this.#keys.CTRL.isDown) // Keyboard
             || this.#activeDuckPointers.size > 0; // Mobile
+
+        const leftPressed = (this.#keys.LEFT.isDown || this.#keys.A.isDown) // Keyboard
+            || this.#activeLeftPointers.size > 0; // Mobile
+
+        const rightPressed = (this.#keys.RIGHT.isDown || this.#keys.D.isDown) // Keyboard
+            || this.#activeRightPointers.size > 0; // Mobile
+
+        // Handle horizontal movement
+        if (leftPressed && !rightPressed) {
+            body.setVelocityX(-Dino.MOVE_SPEED);
+        }
+        else if (rightPressed && !leftPressed) {
+            body.setVelocityX(Dino.MOVE_SPEED);
+        }
+        else {
+            body.setVelocityX(0);
+        }
 
         // Handle jump (with edge detection to prevent holding jump)
         if (jumpPressed && !this.#isDucking && this.#remainingJumps > 0) {
@@ -283,21 +315,57 @@ export class Dino extends Phaser.GameObjects.Sprite {
         const { width, height } = this.scene.scale;
         const buttonAlpha = 0.5; // 50% opacity
         const padding = 20;
+        const buttonSpacing = 70; // Space between buttons
 
-        // Create jump button in bottom left
+        // LEFT SIDE - Movement buttons
+        // Button dimensions (56x56 pixels as defined in ui-elements.json)
+        const buttonSize = 56;
+
+        // Create left button (rotated jump button sprite)
+        // Use center-bottom origin and adjust position to account for button size
+        this.#leftButton = this.scene.add.sprite(
+            padding + (buttonSize / 2),
+            height - padding - (buttonSize / 2),
+            'ui-elements-sprites',
+            'mobileJumpBtn',
+        )
+            .setOrigin(0.5, 0.5)
+            .setDepth(1000)
+            .setAlpha(buttonAlpha)
+            .setScrollFactor(0)
+            .setAngle(-90) // Rotate to point left
+            .setInteractive();
+
+        // Create right button (rotated jump button sprite)
+        // Position it at the same Y level as the left button
+        this.#rightButton = this.scene.add.sprite(
+            padding + buttonSpacing + (buttonSize / 2),
+            height - padding - (buttonSize / 2),
+            'ui-elements-sprites',
+            'mobileJumpBtn',
+        )
+            .setOrigin(0.5, 0.5)
+            .setDepth(1000)
+            .setAlpha(buttonAlpha)
+            .setScrollFactor(0)
+            .setAngle(90) // Rotate to point right
+            .setInteractive();
+
+        // RIGHT SIDE - Action buttons
+        // Create jump button
         this.#jumpButton = this.scene.add.sprite(
-            padding,
+            width - padding - buttonSpacing,
             height - padding,
             'ui-elements-sprites',
             'mobileJumpBtn',
         )
-            .setOrigin(0, 1)
+            .setOrigin(1, 1)
             .setDepth(1000)
             .setAlpha(buttonAlpha)
             .setScrollFactor(0)
             .setInteractive();
 
-        // Create duck button in bottom right
+        // Create duck button
         this.#duckButton = this.scene.add.sprite(
             width - padding,
             height - padding,
@@ -309,6 +377,32 @@ export class Dino extends Phaser.GameObjects.Sprite {
             .setAlpha(buttonAlpha)
             .setScrollFactor(0)
             .setInteractive();
+
+        // Set up touch handlers for left button
+        this.#leftButton.on('pointerdown', (pointer) => {
+            this.#activeLeftPointers.add(pointer.id);
+        });
+
+        this.#leftButton.on('pointerup', (pointer) => {
+            this.#activeLeftPointers.delete(pointer.id);
+        });
+
+        this.#leftButton.on('pointerout', (pointer) => {
+            this.#activeLeftPointers.delete(pointer.id);
+        });
+
+        // Set up touch handlers for right button
+        this.#rightButton.on('pointerdown', (pointer) => {
+            this.#activeRightPointers.add(pointer.id);
+        });
+
+        this.#rightButton.on('pointerup', (pointer) => {
+            this.#activeRightPointers.delete(pointer.id);
+        });
+
+        this.#rightButton.on('pointerout', (pointer) => {
+            this.#activeRightPointers.delete(pointer.id);
+        });
 
         // Set up touch handlers for jump button
         this.#jumpButton.on('pointerdown', (pointer) => {
@@ -351,9 +445,26 @@ export class Dino extends Phaser.GameObjects.Sprite {
 
         const gameSize = this.scene.scale.gameSize;
         const padding = 20;
+        const buttonSpacing = 70;
+        const buttonSize = 56; // As defined in ui-elements.json
 
+        // Update left side movement buttons (centered origin)
+        if (this.#leftButton) {
+            this.#leftButton.setPosition(
+                padding + (buttonSize / 2),
+                gameSize.height - padding - (buttonSize / 2),
+            );
+        }
+        if (this.#rightButton) {
+            this.#rightButton.setPosition(
+                padding + buttonSpacing + (buttonSize / 2),
+                gameSize.height - padding - (buttonSize / 2),
+            );
+        }
+
+        // Update right side action buttons
         if (this.#jumpButton) {
-            this.#jumpButton.setPosition(padding, gameSize.height - padding);
+            this.#jumpButton.setPosition(gameSize.width - padding - buttonSpacing, gameSize.height - padding);
         }
         if (this.#duckButton) {
             this.#duckButton.setPosition(gameSize.width - padding, gameSize.height - padding);
@@ -556,9 +667,15 @@ export class Dino extends Phaser.GameObjects.Sprite {
     }
 
     /**
-     * Toggles the visibility of the jump and duck buttons
+     * Toggles the visibility of all mobile control buttons
      */
     toggleButtonVisibility() {
+        if (this.#leftButton) {
+            this.#leftButton.setVisible(!this.#leftButton.visible);
+        }
+        if (this.#rightButton) {
+            this.#rightButton.setVisible(!this.#rightButton.visible);
+        }
         if (this.#jumpButton) {
             this.#jumpButton.setVisible(!this.#jumpButton.visible);
         }
@@ -577,7 +694,7 @@ export class Dino extends Phaser.GameObjects.Sprite {
             return null;
         }
 
-        return [this.#jumpButton, this.#duckButton];
+        return [this.#leftButton, this.#rightButton, this.#jumpButton, this.#duckButton];
     }
 
     /**
@@ -600,7 +717,7 @@ export class Dino extends Phaser.GameObjects.Sprite {
         this.#inputLogger = new InputLogger(this.scene, 'Dino');
 
         // Set up keyboard controls
-        this.#keys = this.scene.input.keyboard.addKeys('UP,DOWN,SPACE,CTRL');
+        this.#keys = this.scene.input.keyboard.addKeys('UP,DOWN,SPACE,CTRL,LEFT,RIGHT,A,D');
 
         // Check if we're on mobile and set up mobile controls if needed
         this.#isMobile = checkIfMobile();
@@ -633,6 +750,10 @@ export class Dino extends Phaser.GameObjects.Sprite {
                     SPACE: { key: this.#keys.SPACE, description: '⬆️ Jump', keyCode: Phaser.Input.Keyboard.KeyCodes.SPACE },
                     DOWN: { key: this.#keys.DOWN, description: '⬇️ Duck', keyCode: Phaser.Input.Keyboard.KeyCodes.DOWN },
                     CTRL: { key: this.#keys.CTRL, description: '⬇️ Duck', keyCode: Phaser.Input.Keyboard.KeyCodes.CTRL },
+                    LEFT: { key: this.#keys.LEFT, description: '⬅️ Move Left', keyCode: Phaser.Input.Keyboard.KeyCodes.LEFT },
+                    A: { key: this.#keys.A, description: '⬅️ Move Left', keyCode: Phaser.Input.Keyboard.KeyCodes.A },
+                    RIGHT: { key: this.#keys.RIGHT, description: '➡️ Move Right', keyCode: Phaser.Input.Keyboard.KeyCodes.RIGHT },
+                    D: { key: this.#keys.D, description: '➡️ Move Right', keyCode: Phaser.Input.Keyboard.KeyCodes.D },
                 };
 
                 // Add listeners to each key

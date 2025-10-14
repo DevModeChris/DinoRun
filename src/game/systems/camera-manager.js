@@ -189,7 +189,9 @@ export class CameraManager {
      * @param {Phaser.GameObjects.GameObject} target - The object to follow
      */
     cameraFollow(target) {
-        this.#mainCamera.startFollow(target, true, 0.5, 0.5); // Follow target with some smoothing
+        // Only follow Y position (vertical movement for jumping)
+        // Don't follow X position to keep the camera fixed horizontally
+        this.#mainCamera.startFollow(target, true, 0, 0.5);
     }
 
     /**

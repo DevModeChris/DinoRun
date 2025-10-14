@@ -591,7 +591,7 @@ export class Game extends BaseScene {
 
         // Update dino position
         if (this.#dino) {
-            // Set dino X position (fixed distance from left)
+            // Store the default X position (used for initial spawn)
             this.#dinoX = Math.ceil(100 * scale);
 
             // Calculate dino's position relative to platform
@@ -601,12 +601,19 @@ export class Game extends BaseScene {
             // Since origin is at bottom (1), we need to account for the hitbox offset
             const dinoY = groundCollisionY - hitboxOffset;
 
-            // Update dino position and scale
+            // Update dino scale
             this.#dino.setScale(scale);
-            this.#dino.setPosition(this.#dinoX, dinoY);
 
-            // Reset physics body to match new position
-            this.#dino.body.reset(this.#dinoX, dinoY);
+            // If dino hasn't moved yet (x is 0), set initial X position
+            if (this.#dino.x === 0) {
+                this.#dino.setPosition(this.#dinoX, dinoY);
+                this.#dino.body.reset(this.#dinoX, dinoY);
+            }
+            else {
+                // Otherwise, only update Y position (preserve X for horizontal movement)
+                this.#dino.setY(dinoY);
+                this.#dino.body.reset(this.#dino.x, dinoY);
+            }
         }
 
         // Update enemy positions and scale
